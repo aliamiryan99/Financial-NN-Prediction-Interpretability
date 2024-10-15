@@ -4,7 +4,7 @@
 
 Welcome to the **Financial Volume Prediction Project**! This project focuses on predicting trading volume in financial markets using various Neural Networks and Machine Learning models implemented in Python 3.9.20. The primary goal is to analyze and forecast the volume of financial instruments, which is crucial for traders and financial analysts.
 
-We utilize models like LSTM (Long Short-Term Memory), BiLSTM (Bidirectional LSTM), among others, to predict future trading volumes based on historical data. The results are visualized using the Bokeh library, providing interactive and dynamic plots for better insight into model performance and predictions.
+The results are visualized using the Bokeh library, providing interactive and dynamic plots for better insight into model performance and predictions.
 
 ## Requirements
 
@@ -112,11 +112,25 @@ After running the training and testing scripts, and visualizing the results, you
 
 _Note: Replace `Results/sample_loss_plot.png` with the actual path to your sample image._ -->
 
-**Example Prediction Plot:**
+**Example Prediction Plots:**
 
-![Prediction Plot Sample](Results/sample_prediction_plot.png)
+<div align="center">
 
-_Note: Replace `Results/sample_prediction_plot.png` with the actual path to your sample image._
+Unzoomed streamer sample plot <br/> <img src="Results/StreamerSampleUnZoom.png" alt="Unzoomed Prediction Plot Sample" width="600"/>
+
+</div>
+
+<div align="center">
+
+Zoomed streamer sample plot <br/> <img src="Results/StreamerSampleZoom.png" alt="Zoomed Prediction Plot Sample" width="600"/>
+
+</div>
+
+<div align="center">
+Dashboard sample plot<br/>
+  <img src="Results/dashboardSample.png" alt="Dashboard Plot Sample" width="600"/>
+  
+</div>
 
 ---
 
