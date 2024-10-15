@@ -1,0 +1,10 @@
+# Config.yaml
+model: NeuralNetworks.BiLSTM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
+data: ForexData/XAUUSD_H1
+model_parameters:
+  feature_columns: ["Open", "High", "Low", "Close", "Volume"]
+  target_column: Volume
+  seq_length: 24 # Length of input sequence
+  train_ratio: 0.8 # 80% of data used for training
+  epochs: 10 # Number of epochs for training
+  batch_size: 32 # Batch size for training

@@ -1,0 +1,47 @@
+# Ignore all Jupyter notebooks
+*.ipynb
+
+# Allow tracking of specific notebooks if needed (uncomment the next line and specify the filename)
+# !notebooks/important_notebook.ipynb
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore Python bytecode files
+__pycache__/
+*.py[cod]
+
+# Ignore model files and checkpoints (if any)
+*.h5
+*.ckpt
+*.pth
+
+# Ignore log files
+*.log
+
+# Ignore system-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore IDE-specific files and settings
+.vscode/
+.idea/
+
+# Ignore Python egg info and compiled extensions
+*.egg-info/
+*.so
+*.dll
+*.dylib
+
+# Allow CSV files in the repository
+!*.csv
+
+# Ignore other data formats if necessary (adjust based on your needs)
+*.parquet
+*.db
+*.sqlite
+
+# Ignore test outputs or temporary files
+test_output/
+tmp/
