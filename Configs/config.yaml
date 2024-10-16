@@ -1,6 +1,8 @@
 # Config.yaml
-model: NeuralNetworks.BiLSTM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
+model: MachineLearnings.LightGBM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
+preprocess_parameters:
+  filter_holidays: True
 model_parameters:
   feature_columns: ["Open", "High", "Low", "Close", "Volume"]
   target_column: Volume

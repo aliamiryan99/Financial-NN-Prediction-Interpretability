@@ -1,113 +1,120 @@
-# Import Necessary Libraries
-import time
-import warnings
-
+import numpy as np
 import pandas as pd
-from pmdarima import auto_arima
 from statsmodels.tsa.arima.model import ARIMA
-from tqdm import tqdm
+
+from Configs.ConfigSchema import Config
+from Controllers.ModelModules.modules import (preprocess_data, scale_data,
+                                              split_data)
+from Utils.io import load_data, save_results
+import warnings
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-# Config fields
-input_data_path = "Data/ForexData/XAUUSD_H1.csv"
-output_data_path = "Results/SARIMA.csv"
+# Define SARIMA parameters (p, d, q)
+SARIMA_ORDER = (2, 1, 2)
+SARIMA_SEASONAL_ORDER = (2, 1, 2, 24)
 
-# Step 1: Load the Data
-start_time = time.time()
-print("Step 1: Loading the Data")
-data = pd.read_csv(input_data_path, parse_dates=['Time'], index_col='Time')
-end_time = time.time()
-print(f"Step 1 completed in {end_time - start_time:.2f} seconds\n")
+def fit_sarima_model(train_data, target_column, order, seasonal_order):
+    """
+    Fit an SARIMA model to the training data.
 
-# Step 2: Preprocess the Data
-start_time = time.time()
-print("Step 2: Preprocessing the Data")
-data.sort_index(inplace=True)  # Ensure data is sorted by Time
-data = data.asfreq('H')        # Set the frequency to hourly
+    Parameters:
+    - train_data (pd.DataFrame): The training dataset.
+    - target_column (str): The column to forecast.
+    - order (tuple): The (p, d, q) order of the SARIMA model.
 
-# Handle missing values by forward-filling
-data['Volume'].fillna(method='ffill', inplace=True)
-end_time = time.time()
-print(f"Step 2 completed in {end_time - start_time:.2f} seconds\n")
+    Returns:
+    - model_fit: The fitted SARIMA model.
+    """
+    y_train = train_data[target_column]
 
-# Optional: Reduce data size for faster computation (e.g., last 90 days)
-# data = data.last('90D')
+    # Fit the SARIMA model
+    model = ARIMA(y_train, order=order, seasonal_order=seasonal_order, enforce_stationarity=False,
+    enforce_invertibility=False)
+    model_fit = model.fit()
+    print(model_fit.summary())
+    return model_fit
 
-# Step 3: Use auto_arima to Find the Best Hyperparameters
-start_time = time.time()
-print("Step 3: Finding the Best Hyperparameters")
-stepwise_fit = auto_arima(
-    data['Volume'][:1000],
-    seasonal=True,
-    m=24,
-    stepwise=True,
-    max_p=2, max_d=1, max_q=2,
-    max_P=1, max_D=1, max_Q=1,
-    suppress_warnings=True
-)
-end_time = time.time()
-print(f"Step 3 completed in {end_time - start_time:.2f} seconds\n")
+def forecast(model_fit, test_data):
+    """
+    Make predictions using the trained SARIMA model.
 
-# Step 4: Split the Data into Training and Testing Sets
-start_time = time.time()
-print("Step 4: Splitting the Data")
-train_size = int(0.8 * len(data))
-train = data.iloc[:train_size]
-test = data.iloc[train_size:]
-end_time = time.time()
-print(f"Step 4 completed in {end_time - start_time:.2f} seconds\n")
+    Parameters:
+    - model_fit: The fitted SARIMA model.
+    - test (series): test data to forcast.
 
-# Step 5: Fit the SARIMA Model Using the Best Parameters
-start_time = time.time()
-print("Step 5: Fitting the SARIMA Model")
-best_order = stepwise_fit.order
-best_seasonal_order = stepwise_fit.seasonal_order
+    Returns:
+    - y_pred (np.ndarray): Forecasted values.
+    """
+    # Prepare a DataFrame to store predictions
+    predictions = pd.Series(index=test_data.index)
 
-model = ARIMA(
-    train['Volume'],
-    order=best_order,
-    seasonal_order=best_seasonal_order,
-    enforce_stationarity=False,
-    enforce_invertibility=False
-)
+    # Real-time prediction loop
+    for time_point in test_data.index:
+        # Forecast the next time step
+        forecast = model_fit.forecast(steps=1)
+        
+        # Store the prediction
+        predictions[time_point] = forecast.values[0]
 
-model_fit = model.fit()
-end_time = time.time()
-print(f"Step 5 completed in {end_time - start_time:.2f} seconds\n")
+        # Get the new data point
+        new_value = test_data.loc[time_point, 'Volume']
+        
+        # Append the new data point to the existing data
+        model_fit = model_fit.apply(endog=pd.Series([new_value]), refit=False)
 
+    return predictions
 
-# Step 6: Forecast the Test Data
-print("Step 6: Forecasting the Test Data")
-# Generate dynamic forecasts
-forecast = model_fit.predict(start=test.index[0], end=test.index[-1], dynamic=False)
+def run(config: Config):
+    """
+    Orchestrate the SARIMA modeling process.
 
-# Add forecast to test dataframe
-test['VolumeForecast'] = forecast.values
+    Parameters:
+    - config (Config): Configuration object loaded from Config.yaml.
+    """
+    model_parameters = config.model_parameters
 
-####################### slow alternative
-# predictions = pd.Series(index=test.index)
+    # Load data
+    print("Step 1: Loading the Data")
+    data = load_data(config.data.in_path)
 
-# # Real-time prediction loop with tqdm
-# for time_point in tqdm(test.index, desc="Real-time Prediction Progress"):
-#     # Forecast the next time step
-#     forecast = model_fit.forecast(steps=1)
-    
-#     # Store the prediction
-#     predictions[time_point] = forecast.iloc[0]
-    
-#     # Add forecast to test dataframe
-#     test.loc[time_point, 'VolumeForecast'] = forecast.iloc[0]
-    
-#     # Get the new data point
-#     new_value = test.loc[time_point, 'Volume']
-    
-#     # Update the model with the new data point
-#     model_fit = model_fit.append([new_value], refit=False)
+    # Preprocess data
+    print("Step 2: Preprocessing the Data")
+    data = preprocess_data(data, model_parameters.feature_columns, filter_holidays=config.preprocess_parameters)
 
-# Save the test data with forecast to a CSV file
-#####################################
+    # Scale data
+    print("Step 3: Scaling the Data")
+    scaled_data, scalers = scale_data(data, model_parameters.feature_columns)
 
-test.to_csv(output_data_path)
+    # Split data into train/test
+    print("Step 4: Splitting the Data")
+    train, test = split_data(scaled_data, model_parameters.train_ratio)
 
-print(f"Results Saved to {output_data_path}")
+    # Fit SARIMA model
+    print("Step 5: Fitting the SARIMA Model")
+    model_fit = fit_sarima_model(
+        train_data=train,
+        target_column=model_parameters.target_column,
+        order=SARIMA_ORDER,
+        seasonal_order=SARIMA_SEASONAL_ORDER
+    )
+
+    # Forecast
+    print("Step 6: Forecasting the Test Data")
+    y_pred = forecast(model_fit, test)
+    y_pred = np.array(y_pred)
+
+    # Inverse scale predictions back to original scale
+    print("Step 7: Inversing the Scale of Predictions")
+    volume_scaler = scalers['Volume']
+    y_pred_inv = volume_scaler.inverse_transform(y_pred.reshape(-1, 1))
+
+    # Save results
+    print("Step 8: Saving the Results")
+    save_results(
+        data=data,
+        predictions=y_pred_inv.flatten(),
+        train_size=len(train),
+        offset=0,  # No sequence length offset for SARIMA
+        out_path=config.data.out_path
+    )

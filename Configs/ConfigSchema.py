@@ -13,6 +13,10 @@ class ModelParameters:
     epochs: int
     batch_size: int
 
+
+@dataclass
+class PreprocessParameters:
+    filter_holidays: bool
 @dataclass
 class Data:
     name: str
@@ -23,6 +27,7 @@ class Data:
 class Config:
     model: str
     data: Data
+    preprocess_parameters: PreprocessParameters
     model_parameters: ModelParameters
 
 # Utility function to load the YAML config
@@ -30,10 +35,12 @@ def load_config(config_path: str = "Configs/config.yaml") -> Config:
     with open(config_path, 'r') as file:
         config_dict = yaml.safe_load(file)
         model_params = ModelParameters(**config_dict['model_parameters'])
+        preprocess_params = PreprocessParameters(**config_dict['preprocess_parameters'])
         data = Data(name=config_dict['data'], in_path=f"Data/{config_dict['data']}.csv",
                      out_path=f"Results/{config_dict['data']}/{config_dict['model']}.csv")
         return Config(
             model=config_dict['model'],
             data=data,
+            preprocess_parameters=preprocess_params,
             model_parameters=model_params
         )

@@ -11,7 +11,7 @@ from bokeh.plotting import curdoc, figure
 # ---------------------------
 
 # Path to your CSV file
-CSV_FILE_PATH = 'Results/ForexData/XAUUSD_H1/NeuralNetworks.LSTM.csv'
+CSV_FILE_PATH = 'Results/ForexData/XAUUSD_H1/Statisticals.SARIMA.csv'
 
 # Number of data points to stream at each interval
 BATCH_SIZE = 1  # Streaming one data point at a time
@@ -20,7 +20,7 @@ BATCH_SIZE = 1  # Streaming one data point at a time
 UPDATE_INTERVAL = 50
 
 # Maximum number of data points to display
-MAX_POINTS = 300  # Adjust based on your preference
+MAX_POINTS = 500  # Adjust based on your preference
 
 # Width of candlesticks in milliseconds (for H1 data)
 # 0.5 hours = 30 minutes = 1,800,000 milliseconds
