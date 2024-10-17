@@ -1,5 +1,5 @@
 # Config.yaml
-model: MachineLearnings.LightGBM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
+model: Statisticals.Prophet # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
 preprocess_parameters:
   filter_holidays: True

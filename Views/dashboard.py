@@ -132,7 +132,7 @@ def modify_doc(doc):
     grid = gridplot(grid_figures, sizing_mode='stretch_width')  # Apply stretch_width to the grid
     
     # Create the title (centered)
-    title = Div(text="<h1 style='text-align:center;'>XAUUSD Volume Prediction Loss Functions</h1>", height=50, width=800, sizing_mode='stretch_width')
+    title = Div(text="<h1 style='text-align:center;'>XAUUSD Volume Prediction Loss Functions</h1>", styles={'text-align':'center'}, sizing_mode='stretch_width')
     
     # Combine the title and grid into a layout
     layout = column(title, grid, sizing_mode='stretch_width')

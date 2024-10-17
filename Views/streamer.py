@@ -11,7 +11,7 @@ from bokeh.plotting import curdoc, figure
 # ---------------------------
 
 # Path to your CSV file
-CSV_FILE_PATH = 'Results/ForexData/XAUUSD_H1/Statisticals.SARIMA.csv'
+CSV_FILE_PATH = 'Results/ForexData/XAUUSD_H1/Statisticals.Prophet.csv'
 
 # Number of data points to stream at each interval
 BATCH_SIZE = 1  # Streaming one data point at a time
