@@ -10,3 +10,10 @@ model_parameters:
   train_ratio: 0.8 # 80% of data used for training
   epochs: 10 # Number of epochs for training
   batch_size: 32 # Batch size for training
+stream_visualization:
+  batch_size: 1 # Streaming one data point at a time
+  update_interval: 50 # Initial streaming interval in ms
+  max_points: 500 # Maximum number of points to display
+  time_frame: "H" # Time frame to specify the width of candles
+dashboard_visualization:
+  n_cols: 3 # Number of column grid of loss charts

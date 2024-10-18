@@ -17,11 +17,10 @@ def main():
     # Read config.json
     config: Config = load_config()
 
-    # Run dashboard
-    from Views.dashboard import Dashboard
-    streamer = Dashboard(config)
+    # Run forex streamer
+    from Views.streamer import ForexStreamer
+    streamer = ForexStreamer(config)
     streamer.run()
     
-
 
 main()

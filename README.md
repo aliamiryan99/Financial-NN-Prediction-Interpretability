@@ -76,7 +76,7 @@ This script will:
 To stream the results in real-time using Bokeh, specify the name of the result file in the `Views/streamer.py` file. Then, run the following command:
 
 ```bash
-bokeh serve --show Views/streamer.py
+bokeh serve --show Scripts/stream.py
 ```
 
 This will:
@@ -84,14 +84,12 @@ This will:
 - Launch a Bokeh server.
 - Open a new browser window displaying the streaming plot of the model's predictions.
 
-_Note:_ The script currently runs from the `Views` directory. This may change in future updates to run from the `Scripts` folder.
-
 ### 5. Visualizing the Loss Results
 
 To visualize all the loss results stored in the `Results/{data}` folder on a Bokeh dashboard, run:
 
 ```bash
-bokeh serve --show Views/dashboard.py
+bokeh serve --show Scripts/dashboard.py
 ```
 
 This command will start a Bokeh server and display an interactive dashboard in your web browser, where you can explore and analyze the loss metrics of your models.
