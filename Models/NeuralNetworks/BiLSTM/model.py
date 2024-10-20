@@ -1,85 +1,67 @@
 # Import Necessary Libraries
 import warnings
-
 from tensorflow.keras.layers import LSTM, Bidirectional, Dense
 from tensorflow.keras.models import Sequential
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import (preprocess_data, scale_data,
-                                              split_data, create_sequences)
-from Utils.io import load_data, save_results
+from Controllers.ModelModules.modules import create_sequences
+from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-def build_model(seq_length, num_features):
-    """Build the BiLSTM model."""
-    model = Sequential()
-    model.add(Bidirectional(LSTM(50, return_sequences=True), input_shape=(seq_length, num_features)))
-    model.add(Bidirectional(LSTM(50)))
-    model.add(Dense(1))
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    return model
+class BiLSTMModel(ModelBase):
+    def __init__(self, config: Config):
+        super().__init__(config)
+        self.seq_length = config.model_parameters.seq_length
+        self.num_features = len(config.model_parameters.feature_columns)
 
-def train_model(model, X_train, y_train, epochs, batch_size):
-    """Train the BiLSTM model."""
-    model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, verbose=1)
-    return model
+    def prepare_data(self, train, test):
+        model_parameters = self.config.model_parameters
+        # Prepare sequences
+        X_train, y_train = create_sequences(
+            train[model_parameters.feature_columns].values,
+            train[model_parameters.target_column].values,
+            model_parameters.seq_length,
+            reshape=True
+        )
+        X_test, y_test = create_sequences(
+            test[model_parameters.feature_columns].values,
+            test[model_parameters.target_column].values,
+            model_parameters.seq_length,
+            reshape=True
+        )
+        return X_train, y_train, X_test, y_test
 
-def forecast(model, X_test):
-    """Make predictions using the trained model."""
-    y_pred = model.predict(X_test)
-    return y_pred
+    def build(self):
+        """Build the BiLSTM model."""
+        if self.seq_length is None or self.num_features is None:
+            raise Exception("Sequence length and number of features must be set before building the model.")
+        self.model = Sequential()
+        self.model.add(Bidirectional(LSTM(50, return_sequences=True), input_shape=(self.seq_length, self.num_features)))
+        self.model.add(Bidirectional(LSTM(50)))
+        self.model.add(Dense(1))
+        self.model.compile(optimizer=self.config.model_parameters.optimizer, loss=self.config.model_parameters.loss)
+        return self.model
+
+    def train(self, X_train, y_train):
+        if self.model is None:
+            raise Exception("Model needs to be built before training.")
+
+        self.model.fit(
+            X_train,
+            y_train,
+            epochs=self.config.model_parameters.epochs,
+            batch_size=self.config.model_parameters.batch_size,
+            verbose=self.config.model_parameters.verbose
+        )
+
+    def forecast(self, X_test):
+        if self.model is None:
+            raise Exception("Model needs to be built before forecasting.")
+
+        y_pred = self.model.predict(X_test)
+        return y_pred
 
 def run(config: Config):
-    model_parameters = config.model_parameters
-    # Load data
-    print("Step 1: Loading the Data")
-    data = load_data(config.data.in_path)
-
-    # Preprocess data
-    print("Step 2: Preprocessing the Data")
-    data = preprocess_data(data, model_parameters.feature_columns, filter_holidays=config.preprocess_parameters)
-
-    # Scale data
-    print("Step 3: Scaling the Data")
-    scaled_data, scalers = scale_data(data, model_parameters.feature_columns)
-
-    # Split data
-    print("Step 4: Splitting the Data")
-    train, test = split_data(scaled_data, model_parameters.train_ratio)
-
-    # Prepare sequences
-    print("Step 5: Preparing the Data for BiLSTM")
-    X_train, y_train = create_sequences(
-        train[model_parameters.feature_columns].values,
-        train[model_parameters.target_column].values,
-        model_parameters.seq_length,
-        reshape=True
-    )
-    X_test, y_test = create_sequences(
-        test[model_parameters.feature_columns].values,
-        test[model_parameters.target_column].values,
-        model_parameters.seq_length,
-        reshape=True
-    )
-    
-    # Build model
-    print("Step 6: Building the BiLSTM Model")
-    model = build_model(model_parameters.seq_length, len(model_parameters.feature_columns))
-    
-    # Train model
-    print("Step 7: Training the Model")
-    model = train_model(model, X_train, y_train, model_parameters.epochs, model_parameters.batch_size)
-    
-    # Forecast
-    print("Step 8: Forecasting the Test Data")
-    y_pred = forecast(model, X_test)
-    
-    # Inverse transform the predictions and actual values
-    volume_scaler = scalers[model_parameters.target_column]
-    y_pred_inv = volume_scaler.inverse_transform(y_pred)
-    y_test_inv = volume_scaler.inverse_transform(y_test.reshape(-1, 1))
-    
-    # Save results
-    train_size = int(model_parameters.train_ratio * len(scaled_data))
-    save_results(data, y_pred_inv.flatten(), train_size, model_parameters.seq_length, config.data.out_path)
+    model = BiLSTMModel(config)
+    model.run()

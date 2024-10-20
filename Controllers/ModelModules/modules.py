@@ -59,9 +59,10 @@ def create_sequences(features, target, seq_length, reshape=False, flatten=False)
     X = []
     y = []
     for i in range(len(features) - seq_length):
-        X.append(features[i:(i + seq_length)])
         if flatten:
-            X = X.flatten()
+            X.append(features[i:(i + seq_length)].flatten())
+        else:
+            X.append(features[i:(i + seq_length)])
         y.append(target[i + seq_length])
     X = np.array(X)
     y = np.array(y)

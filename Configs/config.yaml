@@ -1,5 +1,5 @@
 # Config.yaml
-model: NeuralNetworks.LSTM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
+model: MachineLearnings.XGBoost # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
 preprocess_parameters:
   filter_holidays: True
@@ -10,6 +10,9 @@ model_parameters:
   train_ratio: 0.8 # 80% of data used for training
   epochs: 10 # Number of epochs for training
   batch_size: 32 # Batch size for training
+  optimizer: "adam" # Optimizer method for training
+  loss: "mean_squared_error" # Loss function for training
+  verbose: true # Show detail processing of training the NN model
 stream_visualization:
   batch_size: 1 # Streaming one data point at a time
   update_interval: 50 # Initial streaming interval in ms

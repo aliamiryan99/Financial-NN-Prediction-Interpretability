@@ -3,6 +3,7 @@ from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (preprocess_data, scale_data,
                                               split_data, create_sequences)
 from Utils.io import load_data, save_results
+from tensorflow.keras.utils import plot_model
 
 class ModelBase(ABC):
     def __init__(self, config: Config):
@@ -28,6 +29,7 @@ class ModelBase(ABC):
         :param test: test input data to be prepared
         :return: Prepared and preprocessed data
         """
+        pass
 
     @abstractmethod
     def train(self, *args, **kwargs):
@@ -64,7 +66,6 @@ class ModelBase(ABC):
         if self.scalers is None or feature_name not in self.scalers:
             raise Exception("Scalers must be set during data preparation before applying inverse transform.")
 
-        print(f"Reversing scaling data for feature: {feature_name}")
         return self.scalers[feature_name].inverse_transform(scaled_data)
         
     def run(self):
@@ -93,7 +94,7 @@ class ModelBase(ABC):
 
         # Step 6: Build model
         print("Step 6: Building the Model")
-        self.build()
+        model = self.build()
 
         # Step 7: Train model
         print("Step 7: Training the Model")
@@ -112,10 +113,7 @@ class ModelBase(ABC):
         y_test_inv = self.inverse_transform(y_test, self.config.model_parameters.target_column)
 
         # Step 11: Save results
-        print("Step 11: Saving the Results")
         save_results(data, y_pred_inv.flatten(), self.config.data.out_path)
-        
-        print("Process Completed Successfully")
 
     
     

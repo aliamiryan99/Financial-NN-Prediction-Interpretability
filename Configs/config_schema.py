@@ -12,6 +12,9 @@ class ModelParameters:
     train_ratio: float
     epochs: int
     batch_size: int
+    optimizer: str
+    loss: str
+    verbose: bool
 
 @dataclass
 class PreprocessParameters:

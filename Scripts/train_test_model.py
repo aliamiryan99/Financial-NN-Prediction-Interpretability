@@ -19,6 +19,9 @@ def main():
     config: Config = load_config()
     model_path = config.model  # e.g., 'NeuralNetworks.LSTM'
 
+    # Log the model path name
+    print(f"#########  {model_path}  #########")
+
     # Full model path
     full_model_path = 'Models.' + model_path + ".model"
 
@@ -27,6 +30,7 @@ def main():
         model = importlib.import_module(full_model_path)
     except ImportError as e:
         print(f"Error importing model: {e}")
+        return
 
     # Run the run function
     if hasattr(model, 'run'):
@@ -34,5 +38,7 @@ def main():
     else:
         print(f"No run function found in model {full_model_path}")
 
+    print("#########  Process Completed Successfully  #########")
+    
 if __name__ == "__main__":
     main()
