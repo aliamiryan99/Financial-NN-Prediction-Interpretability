@@ -11,7 +11,7 @@ from bokeh.palettes import Category10
 from bokeh.plotting import figure
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-from Configs.ConfigSchema import Config  # Ensure this import is correct
+from Configs.config_schema import Config  # Ensure this import is correct
 
 
 class Dashboard:

@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from catboost import CatBoostRegressor  # Import CatBoost regressor
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (
     preprocess_data,
     scale_data,

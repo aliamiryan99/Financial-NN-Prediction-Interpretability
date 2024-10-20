@@ -3,24 +3,11 @@ import numpy as np
 from tensorflow.keras.layers import GRU, Dense
 from tensorflow.keras.models import Sequential
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (preprocess_data, scale_data,
-                                              split_data)
+                                              split_data, create_sequences)
 from Utils.io import load_data, save_results
 
-
-def create_sequences(features, target, seq_length):
-    """Prepare sequences for the GRU model."""
-    X = []
-    y = []
-    for i in range(len(features) - seq_length):
-        X.append(features[i:(i + seq_length)])
-        y.append(target[i + seq_length])
-    X = np.array(X)
-    y = np.array(y)
-    # Reshape input to be [samples, time steps, features]
-    X = X.reshape((X.shape[0], seq_length, features.shape[1]))
-    return X, y
 
 def build_model(seq_length, num_features):
     """Build the GRU model."""
@@ -64,12 +51,14 @@ def run(config: Config):
     X_train, y_train = create_sequences(
         train[model_parameters.feature_columns].values, 
         train[model_parameters.target_column].values, 
-        model_parameters.seq_length
+        model_parameters.seq_length,
+        reshape=True
     )
     X_test, y_test = create_sequences(
         test[model_parameters.feature_columns].values, 
         test[model_parameters.target_column].values, 
-        model_parameters.seq_length
+        model_parameters.seq_length,
+        reshape=True
     )
     
     # Build model

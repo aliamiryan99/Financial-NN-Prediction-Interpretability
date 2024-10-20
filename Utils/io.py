@@ -10,7 +10,7 @@ def load_data(input_data_path):
     return data
 
 
-def save_results(data, predictions, train_size, offset, out_path):
+def save_results(data, predictions, out_path):
     """Save the forecasted results to a CSV file."""
     
     # Ensure the directory exists before saving the file
@@ -19,7 +19,7 @@ def save_results(data, predictions, train_size, offset, out_path):
         os.makedirs(output_dir)
     
     # Adjust the index of the test set to align with predictions
-    results = data.iloc[train_size + offset:].copy()
+    results = data[-len(predictions):].copy()
     results['VolumeForecast'] = predictions
     
     # Save the results to CSV

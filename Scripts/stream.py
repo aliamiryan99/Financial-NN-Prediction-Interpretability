@@ -12,7 +12,7 @@ def main():
 
     # Add project root to sys.path
     sys.path.insert(0, project_root)
-    from Configs.ConfigSchema import Config, load_config
+    from Configs.config_schema import Config, load_config
 
     # Read config.json
     config: Config = load_config()

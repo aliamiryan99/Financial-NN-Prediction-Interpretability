@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from lightgbm import LGBMRegressor  # Import LightGBM regressor
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (
     preprocess_data,
     scale_data,

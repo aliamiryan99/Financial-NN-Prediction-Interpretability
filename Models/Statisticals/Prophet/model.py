@@ -4,7 +4,7 @@ import warnings
 import pandas as pd
 from prophet import Prophet  # Import Prophet model
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (
     preprocess_data,
     split_data
@@ -75,7 +75,7 @@ def run(config: Config):
 
     # Ensure that the index is datetime
     if not isinstance(data.index, pd.DatetimeIndex):
-        data.set_index('Date', inplace=True)
+        data.set_index('Time', inplace=True)
     data.index = pd.to_datetime(data.index)
 
     # Remove timezone information from the index

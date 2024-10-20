@@ -5,7 +5,7 @@ from tensorflow.keras.layers import (Input, Dense, LayerNormalization, Dropout,
                                      MultiHeadAttention, Embedding, GlobalAveragePooling1D)
 from tensorflow.keras.models import Model
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (preprocess_data, scale_data,
                                               split_data)
 from Utils.io import load_data, save_results
@@ -27,7 +27,6 @@ def create_sequences(features, target, seq_length):
     X = np.array(X)
     y = np.array(y)
     return X, y
-
 
 def build_model(seq_length, num_features):
     """Build the Transformer model."""

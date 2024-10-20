@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from sklearn.svm import SVR  # Import SVR from scikit-learn
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (
     preprocess_data,
     scale_data,

@@ -6,7 +6,7 @@ from bokeh.models import (BoxZoomTool, Button, ColumnDataSource,
                           ResetTool, SaveTool, Spinner, WheelZoomTool)
 from bokeh.plotting import curdoc, figure
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 
 
 class ForexStreamer:

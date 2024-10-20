@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (preprocess_data, scale_data,
                                               split_data)
 from Utils.io import load_data, save_results

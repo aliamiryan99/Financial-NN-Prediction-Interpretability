@@ -7,7 +7,7 @@ from sklearn.ensemble import \
     RandomForestRegressor  # Import RandomForest regressor
 from sklearn.preprocessing import MinMaxScaler
 
-from Configs.ConfigSchema import Config
+from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (preprocess_data, scale_data,
                                               split_data)
 from Utils.io import load_data, save_results

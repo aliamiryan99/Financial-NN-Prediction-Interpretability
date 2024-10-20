@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
@@ -52,4 +53,20 @@ def split_data(scaled_data, train_ratio):
     train = scaled_data.iloc[:train_size]
     test = scaled_data.iloc[train_size:]
     return train, test
+
+def create_sequences(features, target, seq_length, reshape=False, flatten=False):
+    """Prepare sequences for the LSTM model."""
+    X = []
+    y = []
+    for i in range(len(features) - seq_length):
+        X.append(features[i:(i + seq_length)])
+        if flatten:
+            X = X.flatten()
+        y.append(target[i + seq_length])
+    X = np.array(X)
+    y = np.array(y)
+    # Reshape input to be [samples, time steps, features]
+    if reshape:
+        X = X.reshape((X.shape[0], seq_length, features.shape[1]))
+    return X, y
 
