@@ -221,7 +221,7 @@ class ForexStreamer:
         pause_button = Button(label="Pause", button_type="success", width=100)
 
         # Create a Div widget for status messages
-        status_div = Div(text="<b>Status:</b> <span style='color:green;'>Streaming Active</span>", width=200, height=30)
+        status_div = Div(text="<b>Status:</b> <span style='color:green;'>Streaming Active</span>")
 
         # Create a Spinner widget for streaming speed (UPDATE_INTERVAL)
         speed_spinner = Spinner(
@@ -333,7 +333,9 @@ class ForexStreamer:
         """Arrange the layout and add to the document."""
         # Arrange the button and status message in a row
         left_margin = Div(width=50, height=30)  # Adjust width as needed
-        button_row = row(left_margin, self.pause_button, self.speed_spinner, self.status_div, sizing_mode='stretch_width', width=800, css_classes=['centered-row'])
+        button_row = row(
+            left_margin, self.pause_button, self.speed_spinner, self.status_div, sizing_mode='stretch_width',
+              width=800, css_classes=['centered-row'], styles={'align-items': 'flex-end', 'justify-content': 'flex-start'},)
 
         top_margin = Div(text="", height=20)  # 20 pixels top margin
         layout = column(top_margin, button_row, self.candlestick_plot, self.volume_plot, sizing_mode='stretch_both')

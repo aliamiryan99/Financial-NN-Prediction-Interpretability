@@ -1,117 +1,92 @@
+# ARIMA_Model.py
 import numpy as np
-import pandas as pd
 from statsmodels.tsa.arima.model import ARIMA
+from Models.model_base import ModelBase
+import warnings
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import (preprocess_data, scale_data,
-                                              split_data)
-from Utils.io import load_data, save_results
-import warnings
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-# Define ARIMA parameters (p, d, q)
-ARIMA_ORDER = (2, 1, 2)
+class ARIMAModel(ModelBase):
+    def __init__(self, config:Config):
+        super().__init__(config)
+        self.order = (2, 1, 2)  # Default ARIMA order
 
-def fit_arima_model(train_data, target_column, order):
+    def build(self):
+        """
+        Set the ARIMA order from configuration.
+        """
+        super().build()
+        self.model = "ARIMA"
+
+    def prepare_data(self, train, test):
+        """
+        Prepare the data for ARIMA modeling.
+
+        Parameters:
+        - train (pd.DataFrame): The training dataset.
+        - test (pd.DataFrame): The testing dataset.
+
+        Returns:
+        - X_train, y_train, X_test, y_test: Prepared data.
+        """
+        super().prepare_data(train, test)
+        target_column = self.config.model_parameters.target_column
+
+        # For ARIMA, we only need the target variable
+        X_train = np.array(train[target_column])  # Is not using for this model
+        y_train = np.array(train[target_column])
+        X_test = np.array(test[target_column])
+        y_test = np.array(test[target_column])
+
+        return X_train, y_train, X_test, y_test
+
+    def train(self, X_train, y_train):
+        """
+        Fit the ARIMA model to the training data.
+
+        Parameters:
+        - X_train: Not used in ARIMA.
+        - y_train (np.ndarray): The target variable for training.
+        """
+        super().train(X_train, y_train)
+
+        # Fit the ARIMA model
+        self.model = ARIMA(y_train, order=self.order)
+        self.model = self.model.fit()
+        print(self.model.summary())
+
+    def forecast(self, X_test):
+        """
+        Make predictions using the trained ARIMA model.
+
+        Parameters:
+        - X_test (np.ndarray): The test data (actual values).
+
+        Returns:
+        - y_pred (np.ndarray): Forecasted values.
+        """
+        # Prepare a numpy array to store predictions
+        y_pred = np.empty(len(X_test))
+
+        # Real-time prediction loop
+        for i in range(len(X_test)):
+            # Forecast the next time step
+            forecast = self.model.forecast(steps=1)
+            y_pred[i] = forecast[0]
+
+            # Get the new observed value
+            new_value = X_test[i]
+
+            # Update the model with the new data point
+            self.model = self.model.apply(endog=[new_value], refit=False)
+
+        return y_pred
+
+def run(config:Config):
     """
-    Fit an ARIMA model to the training data.
-
-    Parameters:
-    - train_data (pd.DataFrame): The training dataset.
-    - target_column (str): The column to forecast.
-    - order (tuple): The (p, d, q) order of the ARIMA model.
-
-    Returns:
-    - model_fit: The fitted ARIMA model.
+    Orchestrate the ARIMA modeling process using the base class's run method.
     """
-    y_train = train_data[target_column]
-
-    # Fit the ARIMA model
-    model = ARIMA(y_train, order=order)
-    model_fit = model.fit()
-    print(model_fit.summary())
-    return model_fit
-
-def forecast(model_fit, test_data):
-    """
-    Make predictions using the trained ARIMA model.
-
-    Parameters:
-    - model_fit: The fitted ARIMA model.
-    - test (series): test data to forcast.
-
-    Returns:
-    - y_pred (np.ndarray): Forecasted values.
-    """
-    # Prepare a DataFrame to store predictions
-    predictions = pd.Series(index=test_data.index)
-
-    # Real-time prediction loop
-    for time_point in test_data.index:
-        # Forecast the next time step
-        forecast = model_fit.forecast(steps=1)
-        
-        # Store the prediction
-        predictions[time_point] = forecast.values[0]
-
-        # Get the new data point
-        new_value = test_data.loc[time_point, 'Volume']
-        
-        # Append the new data point to the existing data
-        model_fit = model_fit.apply(endog=pd.Series([new_value]), refit=False)
-
-    return predictions
-
-def run(config: Config):
-    """
-    Orchestrate the ARIMA modeling process.
-
-    Parameters:
-    - config (Config): Configuration object loaded from Config.yaml.
-    """
-    model_parameters = config.model_parameters
-
-    # Load data
-    print("Step 1: Loading the Data")
-    data = load_data(config.data.in_path)
-
-    # Preprocess data
-    print("Step 2: Preprocessing the Data")
-    data = preprocess_data(data, model_parameters.feature_columns, filter_holidays=config.preprocess_parameters)
-
-    # Scale data
-    print("Step 3: Scaling the Data")
-    scaled_data, scalers = scale_data(data, model_parameters.feature_columns)
-
-    # Split data into train/test
-    print("Step 4: Splitting the Data")
-    train, test = split_data(scaled_data, model_parameters.train_ratio)
-
-    # Fit ARIMA model
-    print("Step 5: Fitting the ARIMA Model")
-    model_fit = fit_arima_model(
-        train_data=train,
-        target_column=model_parameters.target_column,
-        order=ARIMA_ORDER
-    )
-
-    # Forecast
-    print("Step 6: Forecasting the Test Data")
-    y_pred = forecast(model_fit, test)
-    y_pred = np.array(y_pred)
-
-    # Inverse scale predictions back to original scale
-    print("Step 7: Inversing the Scale of Predictions")
-    volume_scaler = scalers['Volume']
-    y_pred_inv = volume_scaler.inverse_transform(y_pred.reshape(-1, 1))
-
-    # Save results
-    print("Step 8: Saving the Results")
-    save_results(
-        data=data,
-        predictions=y_pred_inv.flatten(),
-        train_size=len(train),
-        offset=0,  # No sequence length offset for ARIMA
-        out_path=config.data.out_path
-    )
+    model = ARIMAModel(config)
+    model.run()

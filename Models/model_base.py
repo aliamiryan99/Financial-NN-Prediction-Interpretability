@@ -27,7 +27,7 @@ class ModelBase(ABC):
         
         :param train: train input data to be prepared
         :param test: test input data to be prepared
-        :return: Prepared and preprocessed data
+        :return: Prepared and preprocessed data including X_train, y_tarin, X_test, y_test in numpy.ndarray format
         """
         pass
 
@@ -49,7 +49,7 @@ class ModelBase(ABC):
         Should be implemented by the derived class.
         
         :param data: Input data for forecasting
-        :return: Forecasted result
+        :return: Forecasted result in numpy.ndarray format
         """
         if self.model is None:
             raise Exception("Model needs to be built before forcasting.")
@@ -103,6 +103,7 @@ class ModelBase(ABC):
         # Step 8: Forecast
         print("Step 8: Forecasting the Test Data")
         y_pred = self.forecast(X_test)
+        y_pred = y_pred.reshape(-1, 1)
 
         # Step 9: Reshape y_test to (-1, 1) for inverse transformation
         print("Step 9: Inverse transforming test and predicted data")
