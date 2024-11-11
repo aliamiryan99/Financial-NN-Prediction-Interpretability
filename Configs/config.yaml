@@ -1,5 +1,5 @@
 # Config.yaml
-model: NeuralNetworks.DeepAR # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
+model: MachineLearnings.XGBoost # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
 preprocess_parameters:
   filter_holidays: True
@@ -12,11 +12,12 @@ model_parameters:
   batch_size: 32 # Batch size for training
   optimizer: "adam" # Optimizer method for training
   loss: "mean_squared_error" # Loss function for training
-  verbose: true # Show detail processing of training the NN model
+  verbose: True # Show detail processing of training the NN model
 stream_visualization:
   batch_size: 1 # Streaming one data point at a time
   update_interval: 50 # Initial streaming interval in ms
   max_points: 500 # Maximum number of points to display
   time_frame: "H" # Time frame to specify the width of candles
+  show_aggregator: False # To change the stream approch for plotting the ensemble method with range
 dashboard_visualization:
   n_cols: 3 # Number of column grid of loss charts

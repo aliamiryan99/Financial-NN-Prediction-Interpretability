@@ -47,11 +47,16 @@ class ForexStreamer:
 
     def load_config(self, config: Config):
         """Load configuration settings."""
+        self.show_aggregator = config.stream_visualization.show_aggregator
+        if self.show_aggregator:
+           config.data.out_path = f"Results/{config.data.name}/EnsembleAggregator.csv"
         self.CSV_FILE_PATH = config.data.out_path
         self.BATCH_SIZE = config.stream_visualization.batch_size  # Streaming one data point at a time
         self.UPDATE_INTERVAL = config.stream_visualization.update_interval  # Initial streaming interval in ms
         self.MAX_POINTS = config.stream_visualization.max_points  # Maximum number of points to display
         self.CANDLE_WIDTH = pd.Timedelta(f'0.7{config.stream_visualization.time_frame}')  # Width of candlesticks
+        
+
 
     def load_data(self, csv_file_path):
         """Load and prepare data from CSV file."""
@@ -59,7 +64,12 @@ class ForexStreamer:
         df = pd.read_csv(csv_file_path)
 
         # Ensure the CSV has the required columns
-        required_columns = {'Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'VolumeForecast'}
+        if self.show_aggregator:
+            required_columns = {'Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'VolumeForecast',
+                                 'VolumeForecast_Min', 'VolumeForecast_Max', 'VolumeForecast_Var'}
+        else:
+            required_columns = {'Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'VolumeForecast'}
+
         if not required_columns.issubset(df.columns):
             raise ValueError(f"CSV file must contain the following columns: {required_columns}")
 
@@ -93,7 +103,9 @@ class ForexStreamer:
             x2=np.array([], dtype='datetime64[ns]'),
             Time=np.array([], dtype='datetime64[ns]'),
             Volume=np.array([], dtype='float64'),
-            PredictedVolume=np.array([], dtype='float64')
+            PredictedVolume=np.array([], dtype='float64'),
+            PredictedVolume_Min=np.array([], dtype='float64'),
+            PredictedVolume_Max=np.array([], dtype='float64')
         ))
         return source_price, source_volume
 
@@ -166,6 +178,15 @@ class ForexStreamer:
             y_axis_label='Volume'
         )
 
+        # Add interactive tools to the volume plot
+        volume_plot.add_tools(
+            PanTool(),
+            WheelZoomTool(),
+            BoxZoomTool(),
+            ResetTool(),
+            SaveTool(),
+        )
+
         # Configure x-axis datetime format for volume plot
         volume_plot.xaxis.formatter = DatetimeTickFormatter(
             hours=["%Y-%m-%d %H:%M"],
@@ -177,38 +198,74 @@ class ForexStreamer:
         # Add volume bars with two columns next to each other
         offset = self.CANDLE_WIDTH / 4
 
-        # First volume bar (full volume)
-        volume_plot.vbar(
-            x='x1',
-            top='Volume',
-            width=self.CANDLE_WIDTH * 0.4,
-            source=self.source_volume,
-            color='royalblue',
-            legend_label='Volume'
-        )
-
-        # Second volume bar (predicted volume)
-        volume_plot.vbar(
-            x='x2',
-            top='PredictedVolume',
-            width=self.CANDLE_WIDTH * 0.4,
-            source=self.source_volume,
-            color='crimson',
-            legend_label='Predicted Volume'
-        )
-
-        # Add hover tool for volume plot
-        volume_plot.add_tools(
-            HoverTool(
-                tooltips=[
-                    ("Time", "@Time{%F %H:%M}"),
-                    ("Volume", "@Volume"),
-                    ("Predicted Volume", "@PredictedVolume"),
-                ],
-                formatters={'@Time': 'datetime'},
-                mode='vline'
+        if self.show_aggregator:
+            # First volume bar (full volume)
+            actual_volume_vbar = volume_plot.vbar(
+                x='x1',
+                top='Volume',
+                width=self.CANDLE_WIDTH * 0.6,
+                source=self.source_volume,
+                color='royalblue',
+                legend_label='Actual Volume'
             )
-        )
+            # Show volume range (min-max) instead of single predicted volume
+            volume_plot.vbar(
+                x='x2',
+                top='PredictedVolume_Max',
+                bottom='PredictedVolume_Min',
+                width=self.CANDLE_WIDTH * 0.8,
+                source=self.source_volume,
+                fill_color=None,
+                line_color='crimson',
+                legend_label='Predicted Volume Range'
+            )
+            # Add hover tool specifically to the first vbar (actual_volume_vbar)
+            volume_plot.add_tools(
+                HoverTool(
+                    renderers=[actual_volume_vbar],  # Apply hover only to this renderer
+                    tooltips=[
+                        ("Time", "@Time{%F %H:%M}"),
+                        ("Volume", "@Volume"),
+                        ("Predicted Volume", "@PredictedVolume"),
+                        ("Predicted Volume Min", "@PredictedVolume_Min"),
+                        ("Predicted Volume Max", "@PredictedVolume_Max"),
+                    ],
+                    formatters={'@Time': 'datetime'},
+                    mode='vline'
+                )
+            )
+        else:
+            actual_volume_vbar = volume_plot.vbar(
+                x='x1',
+                top='Volume',
+                width=self.CANDLE_WIDTH * 0.4,
+                source=self.source_volume,
+                color='royalblue',
+                legend_label='Actual Volume'
+            )
+            # Show predicted volume as a single value
+            volume_plot.vbar(
+                x='x2',
+                top='PredictedVolume',
+                width=self.CANDLE_WIDTH * 0.4,
+                source=self.source_volume,
+                color='crimson',
+                legend_label='Predicted Volume'
+            )
+
+            # Add hover tool specifically to the first vbar (actual_volume_vbar)
+            volume_plot.add_tools(
+                HoverTool(
+                    renderers=[actual_volume_vbar],  # Apply hover only to this renderer
+                    tooltips=[
+                        ("Time", "@Time{%F %H:%M}"),
+                        ("Volume", "@Volume"),
+                        ("Predicted Volume", "@PredictedVolume"),
+                    ],
+                    formatters={'@Time': 'datetime'},
+                    mode='vline'
+                )
+            )
 
         # Optional: Customize legend
         volume_plot.legend.location = "top_left"
@@ -314,8 +371,16 @@ class ForexStreamer:
             x2=new_data['Time'] + self.offset,
             Time=new_data['Time'],
             Volume=new_data['Volume'],
-            PredictedVolume=new_data['VolumeForecast']
+            PredictedVolume=new_data['VolumeForecast'],
+            PredictedVolume_Min=new_data['VolumeForecast'],
+            PredictedVolume_Max=new_data['VolumeForecast']
         )
+
+        if self.show_aggregator:
+            new_volume['x1'] = new_data['Time']
+            new_volume['x2'] = new_data['Time']
+            new_volume['PredictedVolume_Min'] = new_data['VolumeForecast_Min']
+            new_volume['PredictedVolume_Max'] = new_data['VolumeForecast_Max']
 
         # Stream new data into the sources
         self.source_price.stream(new_candles, rollover=self.MAX_POINTS)

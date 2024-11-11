@@ -32,6 +32,7 @@ class StreamVisualization:
     update_interval: int
     max_points: int
     time_frame: str
+    show_aggregator: bool
 
 @dataclass
 class DashboardVisualization:
