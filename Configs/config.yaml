@@ -1,6 +1,7 @@
 # Config.yaml
-model: MachineLearnings.XGBoost # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
+model: NeuralNetworks.LSTM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
+interpretability_class: "Perturbation" # ex. Purtubration, SHAP, LIME
 preprocess_parameters:
   filter_holidays: True
 model_parameters:
@@ -8,6 +9,7 @@ model_parameters:
   target_column: Volume
   seq_length: 24 # Length of input sequence
   train_ratio: 0.8 # 80% of data used for training
+  validation_split: 0.1 # Use 10% of the training data for validation
   epochs: 10 # Number of epochs for training
   batch_size: 32 # Batch size for training
   optimizer: "adam" # Optimizer method for training

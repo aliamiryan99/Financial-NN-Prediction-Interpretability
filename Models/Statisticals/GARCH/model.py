@@ -11,7 +11,7 @@ from Controllers.ModelModules.modules import (
     scale_data,
     split_data
 )
-from Utils.io import load_data, save_results
+from Utils.io import load_data, save_forecasting_results
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
@@ -146,7 +146,7 @@ def run(config: Config):
 
     # Save results
     train_size = int(model_parameters.train_ratio * len(scaled_data))
-    save_results(
+    save_forecasting_results(
         data,
         y_pred_inv.flatten(),
         train_size,

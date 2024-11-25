@@ -22,7 +22,7 @@ CATBOOST_THREAD_COUNT = -1
 CATBOOST_USE_GPU = False  # Set to True if GPU is available and desired
 # ============================
 
-class CatBoostModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -73,5 +73,5 @@ class CatBoostModel(ModelBase):
 
 
 def run(config: Config):
-    model = CatBoostModel(config)
+    model = ForecastingModel(config)
     model.run()

@@ -1,4 +1,5 @@
-# Import Necessary Libraries
+
+
 from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.models import Sequential
 
@@ -6,7 +7,7 @@ from Configs.config_schema import Config
 from Controllers.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
-class LSTMModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -43,14 +44,19 @@ class LSTMModel(ModelBase):
     def train(self, X_train, y_train):
         if self.model is None:
             raise Exception("Model needs to be built before training.")
+        
+        # Get validation split from config or set default to 0.1
+        validation_split = getattr(self.config.model_parameters, 'validation_split', 0.1)
 
-        self.model.fit(
+        history = self.model.fit(
             X_train,
             y_train,
             epochs=self.config.model_parameters.epochs,
             batch_size=self.config.model_parameters.batch_size,
-            verbose=self.config.model_parameters.verbose
+            verbose=self.config.model_parameters.verbose,
+            validation_split=validation_split
         )
+        self.history = history  # Store history for later use
 
     def forecast(self, X_test):
         if self.model is None:
@@ -60,7 +66,7 @@ class LSTMModel(ModelBase):
         return y_pred
 
 def run(config: Config):
-    model = LSTMModel(config)
+    model = ForecastingModel(config)
     model.run()
 
     

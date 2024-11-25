@@ -10,7 +10,7 @@ from Configs.config_schema import Config
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-class SARIMAModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.order = (2, 1, 2)  # Default ARIMA order
@@ -92,5 +92,5 @@ def run(config: Config):
     """
     Orchestrate the SARIMA modeling process using the base class's run method.
     """
-    model = SARIMAModel(config)
+    model = ForecastingModel(config)
     model.run()

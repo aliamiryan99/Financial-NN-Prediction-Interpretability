@@ -8,7 +8,7 @@ from Configs.config_schema import Config
 from Controllers.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
-class DeepARModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -48,7 +48,7 @@ class DeepARModel(ModelBase):
         params = Dense(2)(x)  # Output both mu and sigma
 
         # Define the model to output params directly
-        self.model = Model(inputs=inputs, outputs=params)
+        self.model = ForecastingModel(inputs=inputs, outputs=params)
 
         # Negative log likelihood loss function
         def nll(y_true, y_pred):
@@ -89,5 +89,5 @@ class DeepARModel(ModelBase):
         return mu
 
 def run(config: Config):
-    model = DeepARModel(config)
+    model = ForecastingModel(config)
     model.run()

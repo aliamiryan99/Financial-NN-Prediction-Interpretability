@@ -20,7 +20,7 @@ LGBM_N_JOBS = -1
 LGBM_RANDOM_STATE = 42
 # ============================
 
-class LightGBMModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -68,5 +68,5 @@ class LightGBMModel(ModelBase):
 
 
 def run(config: Config):
-    model = LightGBMModel(config)
+    model = ForecastingModel(config)
     model.run()

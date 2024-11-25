@@ -10,7 +10,7 @@ from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.
 warnings.filterwarnings("ignore")  # Suppress warnings
 
 
-class RandomForestModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -56,5 +56,5 @@ class RandomForestModel(ModelBase):
 
 
 def run(config: Config):
-    model = RandomForestModel(config)
+    model = ForecastingModel(config)
     model.run()

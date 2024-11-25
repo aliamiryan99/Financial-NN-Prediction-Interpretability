@@ -8,7 +8,7 @@ from Configs.config_schema import Config
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-class VARModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.lags = 2  # Default lag order for VAR
@@ -83,5 +83,5 @@ def run(config: Config):
     """
     Orchestrate the VAR modeling process using the base class's run method.
     """
-    model = VARModel(config)
+    model = ForecastingModel(config)
     model.run()

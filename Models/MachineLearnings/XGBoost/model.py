@@ -9,7 +9,7 @@ from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-class XGBoostModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -57,5 +57,5 @@ class XGBoostModel(ModelBase):
 
 
 def run(config: Config):
-    model = XGBoostModel(config)
+    model = ForecastingModel(config)
     model.run()

@@ -18,7 +18,7 @@ SVR_EPSILON = 0.1
 SVR_GAMMA = 'scale'  # Can be 'scale', 'auto', or a float value
 # ============================
 
-class SVRModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -64,5 +64,5 @@ class SVRModel(ModelBase):
 
 
 def run(config: Config):
-    model = SVRModel(config)
+    model = ForecastingModel(config)
     model.run()

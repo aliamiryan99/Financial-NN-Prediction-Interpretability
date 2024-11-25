@@ -5,7 +5,7 @@ from Configs.config_schema import Config
 from Controllers.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase
 
-class KANModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.num_features = len(config.model_parameters.feature_columns)
@@ -67,7 +67,7 @@ class KANModel(ModelBase):
         outputs = Dense(1)(x)
 
         # Compile model
-        self.model = Model(inputs=inputs, outputs=outputs)
+        self.model = ForecastingModel(inputs=inputs, outputs=outputs)
         self.model.compile(optimizer='adam', loss='mean_squared_error')
         return self.model
 
@@ -91,5 +91,5 @@ class KANModel(ModelBase):
         return y_pred
 
 def run(config: Config):
-    model = KANModel(config)
+    model = ForecastingModel(config)
     model.run()

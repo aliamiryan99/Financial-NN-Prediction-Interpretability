@@ -25,7 +25,7 @@ PROPHET_HOLIDAYS_PRIOR_SCALE = 10.0
 
 # ============================
 
-class ProphetModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.model = None
@@ -111,5 +111,5 @@ def run(config: Config):
     """
     Orchestrate the Prophet modeling process using the base class's run method.
     """
-    model = ProphetModel(config)
+    model = ForecastingModel(config)
     model.run()

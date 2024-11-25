@@ -8,7 +8,7 @@ from Configs.config_schema import Config
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-class ARIMAModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config:Config):
         super().__init__(config)
         self.order = (2, 1, 2)  # Default ARIMA order

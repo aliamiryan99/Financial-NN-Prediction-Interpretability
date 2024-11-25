@@ -16,7 +16,7 @@ KEY_DIM = 32
 FF_DIM = 64
 DROPOUT_RATE = 0.1
 
-class TransformerModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -74,7 +74,7 @@ class TransformerModel(ModelBase):
         x = GlobalAveragePooling1D()(x)
         outputs = Dense(1)(x)
 
-        self.model = Model(inputs=inputs, outputs=outputs)
+        self.model = ForecastingModel(inputs=inputs, outputs=outputs)
         self.model.compile(optimizer=self.config.model_parameters.optimizer, loss=self.config.model_parameters.loss)
         return self.model
 
@@ -99,5 +99,5 @@ class TransformerModel(ModelBase):
 
 
 def run(config: Config):
-    model = TransformerModel(config)
+    model = ForecastingModel(config)
     model.run()

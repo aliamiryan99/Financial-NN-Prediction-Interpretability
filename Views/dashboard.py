@@ -32,7 +32,7 @@ class Dashboard:
 
     def load_config(self, config: Config):
         """Load configuration settings."""
-        self.results_folder = f"Results/{config.data.name}"  # Example config parameter
+        self.results_folder = os.path.dirname(config.data.out_path)  # Example config parameter
         self.metrics = ['MSE', 'RMSE', 'MAE', 'R-squared', 'ASE', 'MBD']
         self.ncols = config.dashboard_visualization.n_cols  # Number of columns in grid layout
         symbol = config.data.name.split('/')[-1]

@@ -8,7 +8,7 @@ from Controllers.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 
-class GRUModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -63,5 +63,5 @@ class GRUModel(ModelBase):
 
 
 def run(config: Config):
-    model = GRUModel(config)
+    model = ForecastingModel(config)
     model.run()

@@ -12,7 +12,7 @@ from Controllers.ModelModules.modules import (
     scale_data,
     split_data
 )
-from Utils.io import load_data, save_results
+from Utils.io import load_data, save_forecasting_results
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
@@ -41,9 +41,9 @@ class Sampling(tf.keras.layers.Layer):
             shape=tf.shape(z_mean), mean=0.0, stddev=1.0)
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-class VAE(Model):
+class ForecastingModel(Model):
     def __init__(self, seq_length, num_features, latent_dim=LATENT_DIM):
-        super(VAE, self).__init__()
+        super(ForecastingModel, self).__init__()
         self.latent_dim = latent_dim
         self.seq_length = seq_length
         self.num_features = num_features
@@ -143,7 +143,7 @@ def run(config: Config):
     # Build model
     print("Step 6: Building the VAE Model")
     num_features = len(model_parameters.feature_columns)
-    model = VAE(seq_length=model_parameters.seq_length, num_features=num_features)
+    model = ForecastingModel(seq_length=model_parameters.seq_length, num_features=num_features)
 
     # Train model
     print("Step 7: Training the Model")

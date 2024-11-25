@@ -9,7 +9,7 @@ from Controllers.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 
-class TCNModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -63,5 +63,5 @@ class TCNModel(ModelBase):
 
 
 def run(config: Config):
-    model = TCNModel(config)
+    model = ForecastingModel(config)
     model.run()

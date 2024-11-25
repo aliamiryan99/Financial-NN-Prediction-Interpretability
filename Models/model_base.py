@@ -1,8 +1,15 @@
+# Import Necessary Libraries
+import os
+import pickle
+import joblib
+import matplotlib.pyplot as plt
+import yaml  # Import for YAML serialization
+
 from abc import ABC, abstractmethod
 from Configs.config_schema import Config
 from Controllers.ModelModules.modules import (preprocess_data, scale_data,
                                               split_data, create_sequences)
-from Utils.io import load_data, save_results
+from Utils.io import load_data, save_forecasting_results
 from tensorflow.keras.utils import plot_model
 
 class ModelBase(ABC):
@@ -105,16 +112,50 @@ class ModelBase(ABC):
         y_pred = self.forecast(X_test)
         y_pred = y_pred.reshape(-1, 1)
 
-        # Step 9: Reshape y_test to (-1, 1) for inverse transformation
+        # Step 9: Inverse transform the predictions and actual values
         print("Step 9: Inverse transforming test and predicted data")
         y_test = y_test.reshape(-1, 1)
 
-        # Step 10: Inverse transform the predictions and actual values
         y_pred_inv = self.inverse_transform(y_pred, self.config.model_parameters.target_column)
         y_test_inv = self.inverse_transform(y_test, self.config.model_parameters.target_column)
 
-        # Step 11: Save results
-        save_results(data, y_pred_inv.flatten(), self.config.data.out_path)
+        # Step 10: Save results
+        save_forecasting_results(data, y_pred_inv.flatten(), self.config.data.out_path, model_parameters.target_column)
+
+        # Define the experiments path
+        experiments_path = self.config.data.exp_path
+        if not os.path.exists(experiments_path):
+            os.makedirs(experiments_path)
+
+        # Step 11: Save the model, scaler, and loss plot
+        print("Step 11: Saving the Model, Scaler, and Loss Plot, and Config")
+
+        # Save the model
+        model_save_path = os.path.join(experiments_path, 'model.keras')
+        model.save(model_save_path)
+
+        # Save the scaler
+        scalers_save_path = os.path.join(experiments_path, 'scalers.pkl')
+        joblib.dump(self.scalers, scalers_save_path)
+
+        # Save the loss plot
+        if hasattr(self, 'history'):
+            plt.figure()
+            plt.plot(self.history.history['loss'], label='Training Loss')
+            if 'val_loss' in self.history.history:
+                plt.plot(self.history.history['val_loss'], label='Validation Loss')
+            plt.legend()
+            plt.title('Training and Validation Loss')
+            plt.xlabel('Epochs')
+            plt.ylabel('Loss')
+            loss_plot_path = os.path.join(experiments_path, 'loss_plot.png')
+            plt.savefig(loss_plot_path)
+            plt.close()
+        
+        # Save the config file
+        config_save_path = os.path.join(experiments_path, 'config.pkl')
+        with open(config_save_path, 'wb') as config_file:
+            pickle.dump(self.config, config_file)
 
     
     

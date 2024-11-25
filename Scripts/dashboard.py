@@ -19,8 +19,8 @@ def main():
 
     # Run dashboard
     from Views.dashboard import Dashboard
-    streamer = Dashboard(config)
-    streamer.run()
+    dashboard = Dashboard(config)
+    dashboard.run()
     
 
 

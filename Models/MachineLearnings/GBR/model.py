@@ -8,7 +8,7 @@ from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.
 
 warnings.filterwarnings("ignore")  # Suppress warnings
 
-class GradientBoostingModel(ModelBase):
+class ForecastingModel(ModelBase):
     def __init__(self, config: Config):
         super().__init__(config)
         self.seq_length = config.model_parameters.seq_length
@@ -57,5 +57,5 @@ class GradientBoostingModel(ModelBase):
         return y_pred.reshape(-1, 1)
 
 def run(config: Config):
-    model = GradientBoostingModel(config)
+    model = ForecastingModel(config)
     model.run()
