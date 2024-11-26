@@ -20,8 +20,6 @@ def main():
     # Run dashboard
     from Views.dashboard import Dashboard
     dashboard = Dashboard(config)
-    dashboard.run()
     
-
 
 main()

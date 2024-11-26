@@ -13,61 +13,81 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from Configs.config_schema import Config  # Ensure this import is correct
 
-
 class Dashboard:
+    """Main application class to orchestrate the dashboard visualization."""
     def __init__(self, config: Config):
-        """Initialize the Dashboard with configuration and prepare data."""
         # Load configuration
-        self.load_config(config)
+        self.config_loader = ConfigLoader(config)
 
-        # Load and prepare data
-        self.loss_df = self.load_data()
+        # Load data
+        self.data_loader = DataLoader(self.config_loader.results_folder)
 
-        # Initialize figures
-        self.figures = self.create_figures()
-    
-    def run(self):
-        """Run the Dashboard application."""
-        self.create_layout()
+        # Calculate metrics
+        self.metrics_calculator = MetricsCalculator(self.data_loader.csv_files)
 
-    def load_config(self, config: Config):
-        """Load configuration settings."""
-        self.results_folder = os.path.dirname(config.data.out_path)  # Example config parameter
+        # Create figures
+        self.figure_creator = FigureCreator(
+            self.metrics_calculator.loss_df,
+            self.config_loader.metrics
+        )
+
+        # Arrange layout
+        self.layout_manager = LayoutManager(
+            self.figure_creator.figures,
+            self.config_loader.title_text,
+            self.config_loader.ncols
+        )
+
+class ConfigLoader:
+    """Load configuration settings."""
+    def __init__(self, config: Config):
+        self.config = config
+        self.load_config()
+
+    def load_config(self):
+        self.results_folder = os.path.dirname(self.config.data.out_path)
         self.metrics = ['MSE', 'RMSE', 'MAE', 'R-squared', 'ASE', 'MBD']
-        self.ncols = config.dashboard_visualization.n_cols  # Number of columns in grid layout
-        symbol = config.data.name.split('/')[-1]
-        self.title_text = f"{symbol} Volume Prediction Loss Functions"  # Title for the dashboard
+        self.ncols = self.config.dashboard_visualization.n_cols
+        symbol = self.config.data.name.split('/')[-1]
+        self.title_text = f"{symbol} Volume Prediction Loss Functions"
 
-    def absolute_scaled_error(self, y_true, y_pred):
-        """Calculate ASE (Absolute Scaled Error)."""
+
+class DataLoader:
+    """Load data from CSV files."""
+    def __init__(self, results_folder):
+        self.results_folder = results_folder
+        self.csv_files = self.get_csv_files()
+
+    def get_csv_files(self):
+        return glob.glob(os.path.join(self.results_folder, '*.csv'))
+
+
+class MetricsCalculator:
+    """Calculate loss metrics from data."""
+    def __init__(self, csv_files):
+        self.csv_files = csv_files
+        self.loss_df = self.calculate_metrics()
+
+    @staticmethod
+    def absolute_scaled_error(y_true, y_pred):
         y_mean = np.mean(y_true)
         return np.sum(np.abs(y_true - y_pred)) / np.sum(np.abs(y_true - y_mean))
 
-    def mean_bias_deviation(self, y_true, y_pred):
-        """Calculate MBD (Mean Bias Deviation), ignoring zero values in y_true."""
+    @staticmethod
+    def mean_bias_deviation(y_true, y_pred):
         non_zero_indices = y_true > 2  # Adjust threshold as needed
         return np.mean((y_true[non_zero_indices] - y_pred[non_zero_indices]) / y_true[non_zero_indices])
 
-    def load_data(self):
-        """Load and calculate loss measures from CSV files."""
-        # Get list of CSV files in the results folder
-        csv_files = glob.glob(os.path.join(self.results_folder, '*.csv'))
-
-        # List to store loss measures
+    def calculate_metrics(self):
         loss_measures = []
 
-        # Iterate over each CSV file
-        for file_path in csv_files:
-            # Get model name from file name
-            model_name = os.path.splitext(os.path.basename(file_path))[0]  # e.g., 'NeuralNetworks.LSTM'
-            model_name = model_name.split('.')[-1]  # e.g., 'LSTM'
+        for file_path in self.csv_files:
+            model_name = os.path.splitext(os.path.basename(file_path))[0]
+            model_name = model_name.split('.')[-1]
 
-            # Read the CSV file
             df = pd.read_csv(file_path)
 
-            # Ensure 'Volume' and 'VolumeForecast' columns are present
             if {'Volume', 'VolumeForecast'}.issubset(df.columns):
-                # Calculate loss metrics
                 mse = mean_squared_error(df['Volume'], df['VolumeForecast'])
                 rmse = sqrt(mse)
                 mae = mean_absolute_error(df['Volume'], df['VolumeForecast'])
@@ -75,7 +95,6 @@ class Dashboard:
                 ase = self.absolute_scaled_error(df['Volume'], df['VolumeForecast'])
                 mbd = self.mean_bias_deviation(df['Volume'], df['VolumeForecast'])
 
-                # Append results to the list
                 loss_measures.append({
                     'Model': model_name,
                     'MSE': mse,
@@ -88,14 +107,20 @@ class Dashboard:
             else:
                 print(f"Columns 'Volume' and 'VolumeForecast' not found in {file_path}")
 
-        # Create a DataFrame from the loss measures
         loss_df = pd.DataFrame(loss_measures)
         return loss_df
 
+
+class FigureCreator:
+    """Create Bokeh figures for each loss metric."""
+    def __init__(self, loss_df, metrics):
+        self.loss_df = loss_df
+        self.metrics = metrics
+        self.figures = self.create_figures()
+
     def create_figures(self):
-        """Create Bokeh figures for each loss metric."""
         figures = []
-        colors = Category10[len(self.metrics)]  # Assign different colors to each metric
+        colors = Category10[10]  # Use Category10 palette for colors
 
         for i, metric in enumerate(self.metrics):
             data = {'models': self.loss_df['Model'], 'values': self.loss_df[metric]}
@@ -109,7 +134,13 @@ class Dashboard:
                 sizing_mode='stretch_width'
             )
 
-            p.vbar(x='models', top='values', width=0.5, source=source, color=colors[i])
+            p.vbar(
+                x='models',
+                top='values',
+                width=0.5,
+                source=source,
+                color=colors[i % len(colors)]
+            )
             p.xgrid.grid_line_color = None
             p.y_range.start = 0
             p.title.text_font_size = '14pt'
@@ -135,23 +166,24 @@ class Dashboard:
 
         return figures
 
+
+class LayoutManager:
+    """Arrange the layout and add to the document."""
+    def __init__(self, figures, title_text, ncols):
+        self.figures = figures
+        self.title_text = title_text
+        self.ncols = ncols
+        self.create_layout()
+
     def create_layout(self):
-        """Arrange the layout and add to the document."""
-        # Define number of columns in the grid layout
-        ncols = self.ncols if hasattr(self, 'ncols') else 3  # Default to 3 if not set
-
-        # Calculate number of rows needed
-        nrows = ceil(len(self.figures) / ncols)
-
-        # Organize figures into rows
+        nrows = ceil(len(self.figures) / self.ncols)
         grid_figures = []
         for i in range(nrows):
-            start = i * ncols
-            end = start + ncols
+            start = i * self.ncols
+            end = start + self.ncols
             row_figures = self.figures[start:end]
             grid_figures.append(row_figures)
 
-        # Create the grid layout for the figures
         grid = gridplot(grid_figures, sizing_mode='stretch_width')
 
         # Create the title (centered)

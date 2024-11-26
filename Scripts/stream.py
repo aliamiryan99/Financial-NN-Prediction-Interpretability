@@ -18,9 +18,8 @@ def main():
     config: Config = load_config()
 
     # Run forex streamer
-    from Views.streamer import ForexStreamer
-    streamer = ForexStreamer(config)
+    from Views.streamer import Streamer
+    streamer = Streamer(config)
     streamer.run()
-    
 
 main()
