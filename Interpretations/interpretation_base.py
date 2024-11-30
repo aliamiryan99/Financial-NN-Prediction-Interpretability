@@ -41,11 +41,11 @@ class InterpretationBase(ABC):
 
         # Step 5: Split data
         train, test = split_data(scaled_data, model_parameters.train_ratio)
-        X_train, y_train, X_test, y_test = self.forecasting_model.prepare_data(train, test)
+        self.X_train, self.y_train, self.X_test, self.y_test = self.forecasting_model.prepare_data(train, test)
 
         # Step 6: Interpret model predictions
         print("Step 2: Interpreting the Model Predictions")
-        interpretation_results = self.interpret(X_test)
+        interpretation_results = self.interpret(self.X_test)
 
         # Step 7: Normalize the interpretation results
         print("Step 3: Normalizing the Interpretation Results")
@@ -68,7 +68,7 @@ class InterpretationBase(ABC):
         """
         row_sums = array.sum(axis=1, keepdims=True)
         # Avoid division by zero by setting zero sums to 1 (no change to array values in such rows)
-        row_sums[row_sums == 0] = 1
+        row_sums[row_sums == 0] = 0.0001
         return array / row_sums
 
     def normalize_interpretations(self, interpretation_results, num_features):

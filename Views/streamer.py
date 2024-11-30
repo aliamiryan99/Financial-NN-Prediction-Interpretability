@@ -369,10 +369,10 @@ class InterpretabilityPlotCreator:
             x='Feature',
             top='Importance',
             width=0.9,
-            source=self.source_feature_importance
+            source=self.source_feature_importance,
+            color='navy'
         )
         plot.xgrid.grid_line_color = None
-        plot.y_range.start = 0
         plot.xaxis.major_label_orientation = 1
         plot.xaxis.axis_label = "Feature"
         plot.yaxis.axis_label = "Importance"
@@ -393,7 +393,8 @@ class InterpretabilityPlotCreator:
             y='Timestep',
             right='Importance',
             height=0.8,
-            source=self.source_timestep_importance
+            source=self.source_timestep_importance,
+            color='navy'
         )
         plot.ygrid.grid_line_color = None
         plot.xaxis.axis_label = "Importance"
