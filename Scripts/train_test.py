@@ -8,7 +8,8 @@ warnings.filterwarnings("ignore")  # Suppress warnings
 
 def main():
     # Get the script directory and project root
-    project_root = os.path.dirname(os.path.abspath(__file__))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
 
     # Add project root to sys.path
     sys.path.insert(0, project_root)

@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 
-def preprocess_data(data, feature_columns, filter_holidays=False):
+def preprocess_data(data, feature_columns, filter_holidays=True):
     """Preprocess the data by sorting, setting frequency, and handling missing values."""
     
     data.sort_index(inplace=True)  # Ensure data is sorted by Time

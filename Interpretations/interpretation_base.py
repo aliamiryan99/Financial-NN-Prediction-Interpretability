@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from Models.model_base import ModelBase
 from Configs.config_schema import Config
 from Controllers.ModelModules.modules import preprocess_data, scale_data, split_data
-from Utils.io import load_data, save_forecasting_results, save_interpretability_results
+from Utils.io import load_data, save_interpretability_results
 
 class InterpretationBase(ABC):
     def __init__(self, config: Config, forecasting_model: ModelBase):
