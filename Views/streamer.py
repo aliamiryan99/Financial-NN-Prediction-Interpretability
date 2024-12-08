@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 from bokeh.layouts import column, row
@@ -7,7 +8,7 @@ from bokeh.models import (
 )
 from bokeh.plotting import curdoc, figure
 
-from Configs.config_schema import Config
+from Configs.config_schema import Config  # Ensure this import is correct based on your project structure
 
 class Streamer:
     """Main application class to orchestrate the streaming visualization."""
@@ -17,14 +18,28 @@ class Streamer:
             self.config_loader.CSV_FILE_PATH,
             self.config_loader.show_aggregator
         )
+        
+        # Load interpretability data
         self.interpretability_data_loader = InterpretabilityDataLoader(
             self.config_loader.INTERPRETABILITY_PATH,
             config.model_parameters.feature_columns
         )
+        
+        # Load frequency data
+        self.frequency_data_loader = FrequencyDataLoader(
+            config.data.spec_interpret_path,
+            config.model_parameters.feature_columns,
+            self.config_loader
+        )
+
+        # Initialize data sources
         self.data_source_manager = DataSourceManager(
             config.model_parameters.feature_columns,
-            self.interpretability_data_loader.timestep_columns
+            self.interpretability_data_loader.timestep_columns,
+            self.frequency_data_loader.frequency_labels
         )
+        
+        # Create plots
         self.plot_creator = PlotCreator(
             self.data_source_manager.source_price,
             self.data_source_manager.source_volume,
@@ -37,19 +52,34 @@ class Streamer:
             config.model_parameters.feature_columns,
             self.interpretability_data_loader.timestep_columns
         )
+        self.frequency_plot_creator = FrequencyPlotCreator(
+            self.data_source_manager.source_frequencies,
+            self.data_source_manager.source_frequency_importance,
+            config.model_parameters.feature_columns,
+            self.frequency_data_loader.frequency_labels
+        )
+
+        # Create widgets
         self.widget_creator = WidgetCreator(
             self.config_loader.UPDATE_INTERVAL
         )
+        
+        # Initialize stream updater
         self.stream_updater = StreamUpdater(
             self.data_loader.df,
             self.interpretability_data_loader.feature_importance_df,
             self.interpretability_data_loader.timestep_importance_df,
+            self.frequency_data_loader.frequencies_df,
+            self.frequency_data_loader.frequency_importance_df,
             self.data_source_manager.source_price,
             self.data_source_manager.source_volume,
             self.data_source_manager.source_feature_importance,
             self.data_source_manager.source_timestep_importance,
+            self.data_source_manager.source_frequencies,
+            self.data_source_manager.source_frequency_importance,
             config.model_parameters.feature_columns,
             self.interpretability_data_loader.timestep_columns,
+            self.frequency_data_loader.frequency_labels,
             self.config_loader.BATCH_SIZE,
             self.config_loader.MAX_POINTS,
             self.config_loader.show_aggregator,
@@ -59,6 +89,8 @@ class Streamer:
             self.widget_creator.status_div,
             self.widget_creator.speed_spinner
         )
+        
+        # Arrange layout
         self.layout_manager = LayoutManager(
             self.widget_creator.pause_button,
             self.widget_creator.speed_spinner,
@@ -66,8 +98,12 @@ class Streamer:
             self.plot_creator.candlestick_plot,
             self.plot_creator.volume_plot,
             self.interpretability_plot_creator.feature_importance_plot,
-            self.interpretability_plot_creator.timestep_importance_plot
+            self.interpretability_plot_creator.timestep_importance_plot,
+            self.frequency_plot_creator.frequency_line_plot,
+            self.frequency_plot_creator.frequency_importance_bar_plot
         )
+        
+        # Start streaming
         self.stream_updater.add_periodic_callback()
 
     def run(self):
@@ -88,8 +124,9 @@ class ConfigLoader:
         self.UPDATE_INTERVAL = self.config.stream_visualization.update_interval
         self.MAX_POINTS = self.config.stream_visualization.max_points
         self.CANDLE_WIDTH = pd.Timedelta(f'0.7{self.config.stream_visualization.time_frame}')
-        # Changed as per your request
         self.INTERPRETABILITY_PATH = self.config.data.interpret_path
+        # Sequence length for dynamic frequency count
+        self.seq_length = self.config.model_parameters.seq_length
 
 class DataLoader:
     """Load and prepare data from CSV file."""
@@ -138,39 +175,76 @@ class InterpretabilityDataLoader:
             timestep_importance_cols = [f"Timestep_{i+1}" for i in range(df.shape[1] - self.num_features)]
             df.columns = list(feature_importance_cols) + timestep_importance_cols
 
-        feature_importance_df = df[feature_importance_cols]
-        timestep_importance_df = df[timestep_importance_cols]
+        feature_importance_df = df[list(feature_importance_cols)]
+        timestep_importance_df = df[list(timestep_importance_cols)]
         return feature_importance_df, timestep_importance_df, timestep_importance_cols.tolist()
 
+class FrequencyDataLoader:
+    """Load and prepare frequency and frequency importance data."""
+    def __init__(self, spec_interpret_path, feature_columns, config_loader: ConfigLoader):
+        self.spec_interpret_path = spec_interpret_path
+        self.feature_columns = feature_columns
+        self.config_loader = config_loader
+        # Frequencies.csv path
+        self.frequencies_path = os.path.join(os.path.dirname(self.spec_interpret_path), "Frequencies.csv")
+        self.num_frequencies = self.compute_num_frequencies()
+        self.frequencies_df, self.frequency_importance_df = self.load_data()
+        self.frequency_labels = self.extract_frequency_labels()
+
+    def compute_num_frequencies(self):
+        return self.config_loader.seq_length // 2 + 1  # Dynamic number of frequencies
+
+    def load_data(self):
+        frequencies_df = pd.read_csv(self.frequencies_path)
+        frequency_importance_df = pd.read_csv(self.spec_interpret_path)
+        
+        # Validate number of frequencies
+        for feature in self.feature_columns:
+            feature_freq_cols = [col for col in frequencies_df.columns if col.startswith(f"{feature}_freq_")]
+            if len(feature_freq_cols) != self.num_frequencies:
+                raise ValueError(f"Expected {self.num_frequencies} frequency columns for feature '{feature}', but found {len(feature_freq_cols)}.")
+        
+        # Ensure frequency importance has correct number of columns
+        if frequency_importance_df.shape[1] != self.num_frequencies:
+            raise ValueError(f"Frequency importance data must have exactly {self.num_frequencies} columns.")
+        
+        return frequencies_df, frequency_importance_df
+
+    def extract_frequency_labels(self):
+        # Extract unique frequency labels from frequency importance columns
+        return list(self.frequency_importance_df.columns)
+
 class DataSourceManager:
-    """Initialize ColumnDataSources for price, volume, and interpretability data."""
-    def __init__(self, feature_columns, timestep_columns):
+    """Initialize ColumnDataSources for price, volume, interpretability, frequency data."""
+    def __init__(self, feature_columns, timestep_columns, frequency_labels):
         self.source_price = self.initialize_price_source()
         self.source_volume = self.initialize_volume_source()
         self.source_feature_importance = self.initialize_feature_importance_source(feature_columns)
         self.source_timestep_importance = self.initialize_timestep_importance_source(timestep_columns)
+        self.source_frequencies = self.initialize_frequencies_source(frequency_labels, feature_columns)
+        self.source_frequency_importance = self.initialize_frequency_importance_source(frequency_labels)
 
     @staticmethod
     def initialize_price_source():
         return ColumnDataSource(data=dict(
-            Time=np.array([], dtype='datetime64[ns]'),
-            Open=np.array([], dtype='float64'),
-            High=np.array([], dtype='float64'),
-            Low=np.array([], dtype='float64'),
-            Close=np.array([], dtype='float64'),
-            Color=np.array([], dtype='object')
+            Time=[],  # datetime objects
+            Open=[],
+            High=[],
+            Low=[],
+            Close=[],
+            Color=[]
         ))
 
     @staticmethod
     def initialize_volume_source():
         return ColumnDataSource(data=dict(
-            x1=np.array([], dtype='datetime64[ns]'),
-            x2=np.array([], dtype='datetime64[ns]'),
-            Time=np.array([], dtype='datetime64[ns]'),
-            Volume=np.array([], dtype='float64'),
-            PredictedVolume=np.array([], dtype='float64'),
-            PredictedVolume_Min=np.array([], dtype='float64'),
-            PredictedVolume_Max=np.array([], dtype='float64')
+            x1=[],  # datetime objects
+            x2=[],  # datetime objects
+            Time=[],  # datetime objects
+            Volume=[],
+            PredictedVolume=[],
+            PredictedVolume_Min=[],
+            PredictedVolume_Max=[]
         ))
 
     @staticmethod
@@ -185,6 +259,22 @@ class DataSourceManager:
         return ColumnDataSource(data=dict(
             Timestep=timestep_columns,
             Importance=[0]*len(timestep_columns)
+        ))
+
+    @staticmethod
+    def initialize_frequencies_source(frequency_labels, feature_columns):
+        # 'Frequency' holds the x-axis labels
+        # Each feature has a list of frequency values
+        data = {'Frequency': frequency_labels}
+        for feature in feature_columns:
+            data[feature] = [0]*len(frequency_labels)  # Initialize with zeros
+        return ColumnDataSource(data=data)
+
+    @staticmethod
+    def initialize_frequency_importance_source(frequency_labels):
+        return ColumnDataSource(data=dict(
+            Frequency=frequency_labels,
+            Importance=[0]*len(frequency_labels)
         ))
 
 class PlotCreator:
@@ -202,7 +292,6 @@ class PlotCreator:
             title='XAU/USD Candlestick Streaming',
             x_axis_type='datetime',
             height=500,
-            width=800,
             sizing_mode='stretch_width',
             toolbar_location='above',
             tools=[],
@@ -251,8 +340,7 @@ class PlotCreator:
         volume_plot = figure(
             title='XAU/USD Volume Streaming',
             x_axis_type='datetime',
-            height=200,
-            width=800,
+            height=300,
             sizing_mode='stretch_width',
             toolbar_location='above',
             x_range=candlestick_plot.x_range,
@@ -358,7 +446,7 @@ class InterpretabilityPlotCreator:
         # Create a vertical bar chart for feature importance
         plot = figure(
             x_range=self.feature_columns,
-            height=200,
+            height=300,
             width=300,
             title="Feature Importance",
             toolbar_location=None,
@@ -424,20 +512,31 @@ class StreamUpdater:
     """Manage data streaming and updates."""
     def __init__(
         self, df, feature_importance_df, timestep_importance_df,
-        source_price, source_volume, source_feature_importance, source_timestep_importance,
-        feature_columns, timestep_columns,
+        frequencies_df, frequency_importance_df,
+        source_price, source_volume,
+        source_feature_importance, source_timestep_importance,
+        source_frequencies, source_frequency_importance,
+        feature_columns, timestep_columns, frequency_labels,
         batch_size, max_points,
         show_aggregator, offset, update_interval, pause_button, status_div, speed_spinner
     ):
         self.df = df
         self.feature_importance_df = feature_importance_df
         self.timestep_importance_df = timestep_importance_df
+        self.frequencies_df = frequencies_df
+        self.frequency_importance_df = frequency_importance_df
+
         self.source_price = source_price
         self.source_volume = source_volume
         self.source_feature_importance = source_feature_importance
         self.source_timestep_importance = source_timestep_importance
+        self.source_frequencies = source_frequencies
+        self.source_frequency_importance = source_frequency_importance
+
         self.feature_columns = feature_columns
         self.timestep_columns = timestep_columns
+        self.frequency_labels = frequency_labels
+
         self.BATCH_SIZE = batch_size
         self.MAX_POINTS = max_points
         self.show_aggregator = show_aggregator
@@ -463,52 +562,85 @@ class StreamUpdater:
         if end_index > self.TOTAL_POINTS:
             end_index = self.TOTAL_POINTS
 
+        if self.current_index >= self.TOTAL_POINTS:
+            curdoc().remove_periodic_callback(self.callback_id)
+            print("All data has been streamed.")
+            return
+
         new_data = self.df.iloc[self.current_index:end_index]
         new_feature_importance = self.feature_importance_df.iloc[self.current_index:end_index]
         new_timestep_importance = self.timestep_importance_df.iloc[self.current_index:end_index]
+        new_freq_data = self.frequencies_df.iloc[self.current_index:end_index]
+        new_freq_importance = self.frequency_importance_df.iloc[self.current_index:end_index]
 
         if new_data.empty:
             return
 
+        # Price and volume update
         new_candles = dict(
-            Time=new_data['Time'],
-            Open=new_data['Open'],
-            High=new_data['High'],
-            Low=new_data['Low'],
-            Close=new_data['Close'],
-            Color=new_data['Color']
+            Time=new_data['Time'].tolist(),
+            Open=new_data['Open'].tolist(),
+            High=new_data['High'].tolist(),
+            Low=new_data['Low'].tolist(),
+            Close=new_data['Close'].tolist(),
+            Color=new_data['Color'].tolist()
         )
 
         new_volume = dict(
-            x1=new_data['Time'] - self.offset,
-            x2=new_data['Time'] + self.offset,
-            Time=new_data['Time'],
-            Volume=new_data['Volume'],
-            PredictedVolume=new_data['VolumeForecast'],
-            PredictedVolume_Min=new_data['VolumeForecast'],
-            PredictedVolume_Max=new_data['VolumeForecast']
+            x1=(new_data['Time'] - self.offset).tolist(),
+            x2=(new_data['Time'] + self.offset).tolist(),
+            Time=new_data['Time'].tolist(),
+            Volume=new_data['Volume'].tolist(),
+            PredictedVolume=new_data['VolumeForecast'].tolist(),
+            PredictedVolume_Min=new_data.get('VolumeForecast_Min', new_data['VolumeForecast']).tolist(),
+            PredictedVolume_Max=new_data.get('VolumeForecast_Max', new_data['VolumeForecast']).tolist()
         )
 
         if self.show_aggregator:
-            new_volume['x1'] = new_data['Time']
-            new_volume['x2'] = new_data['Time']
-            new_volume['PredictedVolume_Min'] = new_data['VolumeForecast_Min']
-            new_volume['PredictedVolume_Max'] = new_data['VolumeForecast_Max']
+            new_volume['x1'] = new_data['Time'].tolist()
+            new_volume['x2'] = new_data['Time'].tolist()
+            new_volume['PredictedVolume_Min'] = new_data['VolumeForecast_Min'].tolist()
+            new_volume['PredictedVolume_Max'] = new_data['VolumeForecast_Max'].tolist()
 
         self.source_price.stream(new_candles, rollover=self.MAX_POINTS)
         self.source_volume.stream(new_volume, rollover=self.MAX_POINTS)
 
-        # Update interpretability data sources with the latest values
-        latest_feature_importance = new_feature_importance.iloc[-1]
-        latest_timestep_importance = new_timestep_importance.iloc[-1]
+        # Interpretability updates
+        latest_feature_importance = new_feature_importance.iloc[-1].tolist()
+        latest_timestep_importance = new_timestep_importance.iloc[-1].tolist()
 
         self.source_feature_importance.data = {
             'Feature': self.feature_columns,
-            'Importance': latest_feature_importance.values
+            'Importance': latest_feature_importance
         }
         self.source_timestep_importance.data = {
             'Timestep': self.timestep_columns,
-            'Importance': latest_timestep_importance.values
+            'Importance': latest_timestep_importance
+        }
+
+        # Frequency updates: set the current frequency values
+        current_freq_row = new_freq_data.iloc[-1]
+        freq_values = []
+        for feature in self.feature_columns:
+            feature_freq_cols = [col for col in self.frequencies_df.columns if col.startswith(f"{feature}_freq_")]
+            feature_freq_values = current_freq_row[feature_freq_cols].tolist()
+            freq_values.append(feature_freq_values)
+
+        # Transpose the frequency values to match frequency_labels
+        transposed_freq_values = list(zip(*freq_values))  # Each tuple corresponds to a frequency across features
+
+        # Prepare data for frequencies plot
+        freq_data = {'Frequency': self.frequency_labels}
+        for idx, feature in enumerate(self.feature_columns):
+            freq_data[feature] = freq_values[idx]
+
+        self.source_frequencies.data = freq_data
+
+        # Frequency importance: set the current importance values
+        latest_freq_importance = new_freq_importance.iloc[-1].tolist()
+        self.source_frequency_importance.data = {
+            'Frequency': self.frequency_labels,
+            'Importance': latest_freq_importance
         }
 
         self.current_index = end_index
@@ -550,7 +682,8 @@ class LayoutManager:
     def __init__(
         self, pause_button, speed_spinner, status_div,
         candlestick_plot, volume_plot,
-        feature_importance_plot, timestep_importance_plot
+        feature_importance_plot, timestep_importance_plot,
+        frequency_line_plot, frequency_importance_bar_plot
     ):
         self.pause_button = pause_button
         self.speed_spinner = speed_spinner
@@ -559,6 +692,8 @@ class LayoutManager:
         self.volume_plot = volume_plot
         self.feature_importance_plot = feature_importance_plot
         self.timestep_importance_plot = timestep_importance_plot
+        self.frequency_line_plot = frequency_line_plot
+        self.frequency_importance_bar_plot = frequency_importance_bar_plot
         self.create_layout()
 
     def create_layout(self):
@@ -581,7 +716,10 @@ class LayoutManager:
         self.feature_importance_plot.sizing_mode = 'fixed'
         self.feature_importance_plot.width = 300
 
-        # Create rows for the plots
+        # The new frequency plots at the bottom
+        self.frequency_line_plot.sizing_mode = 'stretch_width'
+        self.frequency_importance_bar_plot.sizing_mode = 'stretch_width'
+
         candlestick_row = row(
             self.candlestick_plot, self.timestep_importance_plot,
             sizing_mode='stretch_width'
@@ -592,9 +730,320 @@ class LayoutManager:
             sizing_mode='stretch_width'
         )
 
+        frequency_row = row(
+            self.frequency_line_plot,
+            self.frequency_importance_bar_plot,
+            sizing_mode='stretch_width'
+        )
+
         layout = column(
-            top_margin, button_row, candlestick_row, volume_row,
+            top_margin, button_row, candlestick_row, volume_row, frequency_row,
             sizing_mode='stretch_both'
         )
         curdoc().add_root(layout)
-        curdoc().title = "Historical Forex Data Streaming with Candlesticks"
+        curdoc().title = "Historical Forex Data Streaming with Candlesticks and Frequencies"
+
+class FrequencyPlotCreator:
+    """Create Bokeh figures for the frequency plots."""
+    def __init__(self, source_frequencies, source_frequency_importance, feature_columns, frequency_labels):
+        self.source_frequencies = source_frequencies
+        self.source_frequency_importance = source_frequency_importance
+        self.feature_columns = feature_columns
+        self.frequency_labels = frequency_labels
+        self.frequency_line_plot = self.create_frequency_line_plot()
+        self.frequency_importance_bar_plot = self.create_frequency_importance_plot()
+
+    def create_frequency_line_plot(self):
+        plot = figure(
+            title="Frequencies by Feature",
+            x_range=self.frequency_labels,
+            height=300,
+            sizing_mode='stretch_width',
+            toolbar_location='above',
+            tools=[PanTool(), WheelZoomTool(), BoxZoomTool(), ResetTool(), SaveTool()],
+            y_axis_label='Frequency Value'
+        )
+
+        # Add a line for each feature
+        colors = ['blue', 'green', 'red', 'orange', 'purple']  # Extend if more features
+        for feature, color in zip(self.feature_columns, colors):
+            plot.line(
+                x='Frequency',
+                y=feature,
+                source=self.source_frequencies,
+                line_color=color,
+                legend_label=feature,
+                line_width=2
+            )
+            plot.circle(
+                x='Frequency',
+                y=feature,
+                source=self.source_frequencies,
+                fill_color=color,
+                size=5
+            )
+
+        plot.legend.location = "top_right"
+        plot.legend.click_policy = "hide"
+        plot.xaxis.major_label_orientation = 1
+        return plot
+
+    def create_frequency_importance_plot(self):
+        plot = figure(
+            x_range=self.frequency_labels,
+            height=300,
+            title="Frequency Importance",
+            toolbar_location=None,
+            tools="",
+            sizing_mode='stretch_width'
+        )
+        plot.vbar(
+            x='Frequency',
+            top='Importance',
+            width=0.9,
+            source=self.source_frequency_importance,
+            color='teal'
+        )
+        plot.xgrid.grid_line_color = None
+        plot.xaxis.major_label_orientation = 1
+        plot.xaxis.axis_label = "Frequency"
+        plot.yaxis.axis_label = "Importance"
+        return plot
+
+class StreamUpdater:
+    """Manage data streaming and updates."""
+    def __init__(
+        self, df, feature_importance_df, timestep_importance_df,
+        frequencies_df, frequency_importance_df,
+        source_price, source_volume,
+        source_feature_importance, source_timestep_importance,
+        source_frequencies, source_frequency_importance,
+        feature_columns, timestep_columns, frequency_labels,
+        batch_size, max_points,
+        show_aggregator, offset, update_interval, pause_button, status_div, speed_spinner
+    ):
+        self.df = df
+        self.feature_importance_df = feature_importance_df
+        self.timestep_importance_df = timestep_importance_df
+        self.frequencies_df = frequencies_df
+        self.frequency_importance_df = frequency_importance_df
+
+        self.source_price = source_price
+        self.source_volume = source_volume
+        self.source_feature_importance = source_feature_importance
+        self.source_timestep_importance = source_timestep_importance
+        self.source_frequencies = source_frequencies
+        self.source_frequency_importance = source_frequency_importance
+
+        self.feature_columns = feature_columns
+        self.timestep_columns = timestep_columns
+        self.frequency_labels = frequency_labels
+
+        self.BATCH_SIZE = batch_size
+        self.MAX_POINTS = max_points
+        self.show_aggregator = show_aggregator
+        self.offset = offset
+        self.UPDATE_INTERVAL = update_interval
+        self.pause_button = pause_button
+        self.status_div = status_div
+        self.speed_spinner = speed_spinner
+
+        self.TOTAL_POINTS = len(self.df)
+        self.current_index = 0
+        self.is_paused = False
+        self.callback_id = None
+
+        self.pause_button.on_click(self.toggle_pause)
+        self.speed_spinner.on_change('value', self.update_interval_callback)
+
+    def update(self):
+        if self.is_paused:
+            return
+
+        end_index = self.current_index + self.BATCH_SIZE
+        if end_index > self.TOTAL_POINTS:
+            end_index = self.TOTAL_POINTS
+
+        if self.current_index >= self.TOTAL_POINTS:
+            curdoc().remove_periodic_callback(self.callback_id)
+            print("All data has been streamed.")
+            return
+
+        new_data = self.df.iloc[self.current_index:end_index]
+        new_feature_importance = self.feature_importance_df.iloc[self.current_index:end_index]
+        new_timestep_importance = self.timestep_importance_df.iloc[self.current_index:end_index]
+        new_freq_data = self.frequencies_df.iloc[self.current_index:end_index]
+        new_freq_importance = self.frequency_importance_df.iloc[self.current_index:end_index]
+
+        if new_data.empty:
+            return
+
+        # Price and volume update
+        new_candles = dict(
+            Time=new_data['Time'].tolist(),
+            Open=new_data['Open'].tolist(),
+            High=new_data['High'].tolist(),
+            Low=new_data['Low'].tolist(),
+            Close=new_data['Close'].tolist(),
+            Color=new_data['Color'].tolist()
+        )
+
+        new_volume = dict(
+            x1=(new_data['Time'] - self.offset).tolist(),
+            x2=(new_data['Time'] + self.offset).tolist(),
+            Time=new_data['Time'].tolist(),
+            Volume=new_data['Volume'].tolist(),
+            PredictedVolume=new_data['VolumeForecast'].tolist(),
+            PredictedVolume_Min=new_data.get('VolumeForecast_Min', new_data['VolumeForecast']).tolist(),
+            PredictedVolume_Max=new_data.get('VolumeForecast_Max', new_data['VolumeForecast']).tolist()
+        )
+
+        if self.show_aggregator:
+            new_volume['x1'] = new_data['Time'].tolist()
+            new_volume['x2'] = new_data['Time'].tolist()
+            new_volume['PredictedVolume_Min'] = new_data['VolumeForecast_Min'].tolist()
+            new_volume['PredictedVolume_Max'] = new_data['VolumeForecast_Max'].tolist()
+
+        self.source_price.stream(new_candles, rollover=self.MAX_POINTS)
+        self.source_volume.stream(new_volume, rollover=self.MAX_POINTS)
+
+        # Interpretability updates
+        latest_feature_importance = new_feature_importance.iloc[-1].tolist()
+        latest_timestep_importance = new_timestep_importance.iloc[-1].tolist()
+
+        self.source_feature_importance.data = {
+            'Feature': self.feature_columns,
+            'Importance': latest_feature_importance
+        }
+        self.source_timestep_importance.data = {
+            'Timestep': self.timestep_columns,
+            'Importance': latest_timestep_importance
+        }
+
+        # Frequency updates: set the current frequency values
+        current_freq_row = new_freq_data.iloc[-1]
+        freq_values = []
+        for feature in self.feature_columns:
+            feature_freq_cols = [col for col in self.frequencies_df.columns if col.startswith(f"{feature}_freq_")]
+            feature_freq_values = current_freq_row[feature_freq_cols].tolist()
+            freq_values.append(feature_freq_values)
+
+        # Prepare data for frequencies plot
+        freq_data = {'Frequency': self.frequency_labels}
+        for idx, feature in enumerate(self.feature_columns):
+            freq_data[feature] = freq_values[idx]
+
+        self.source_frequencies.data = freq_data
+
+        # Frequency importance: set the current importance values
+        latest_freq_importance = new_freq_importance.iloc[-1].tolist()
+        self.source_frequency_importance.data = {
+            'Frequency': self.frequency_labels,
+            'Importance': latest_freq_importance
+        }
+
+        self.current_index = end_index
+
+        if self.current_index >= self.TOTAL_POINTS:
+            curdoc().remove_periodic_callback(self.callback_id)
+            print("All data has been streamed.")
+
+    def toggle_pause(self):
+        if self.is_paused:
+            self.is_paused = False
+            self.pause_button.label = "Pause"
+            self.pause_button.button_type = "success"
+            self.status_div.text = "<b>Status:</b> <span style='color:green;'>Streaming Active</span>"
+            print("Streaming resumed.")
+        else:
+            self.is_paused = True
+            self.pause_button.label = "Resume"
+            self.pause_button.button_type = "warning"
+            self.status_div.text = "<b>Status:</b> <span style='color:red;'>Streaming Paused</span>"
+            print("Streaming paused.")
+
+    def update_interval_callback(self, attr, old, new):
+        try:
+            new_interval = int(self.speed_spinner.value)
+            if self.callback_id is not None:
+                curdoc().remove_periodic_callback(self.callback_id)
+            self.UPDATE_INTERVAL = new_interval
+            self.callback_id = curdoc().add_periodic_callback(self.update, self.UPDATE_INTERVAL)
+            print(f"Streaming speed updated to {self.UPDATE_INTERVAL} ms.")
+        except Exception as e:
+            print(f"Error updating streaming speed: {e}")
+
+    def add_periodic_callback(self):
+        self.callback_id = curdoc().add_periodic_callback(self.update, self.UPDATE_INTERVAL)
+
+class LayoutManager:
+    """Arrange the layout and add to the document."""
+    def __init__(
+        self, pause_button, speed_spinner, status_div,
+        candlestick_plot, volume_plot,
+        feature_importance_plot, timestep_importance_plot,
+        frequency_line_plot, frequency_importance_bar_plot
+    ):
+        self.pause_button = pause_button
+        self.speed_spinner = speed_spinner
+        self.status_div = status_div
+        self.candlestick_plot = candlestick_plot
+        self.volume_plot = volume_plot
+        self.feature_importance_plot = feature_importance_plot
+        self.timestep_importance_plot = timestep_importance_plot
+        self.frequency_line_plot = frequency_line_plot
+        self.frequency_importance_bar_plot = frequency_importance_bar_plot
+        self.create_layout()
+
+    def create_layout(self):
+        left_margin = Div(width=50, height=30)
+        button_row = row(
+            left_margin, self.pause_button, self.speed_spinner, self.status_div,
+            sizing_mode='stretch_width',
+            width=800,
+            css_classes=['centered-row'],
+            styles={'align-items': 'flex-end', 'justify-content': 'flex-start'},
+        )
+        top_margin = Div(text="", height=20)
+
+        # Adjust plot sizes
+        self.candlestick_plot.sizing_mode = 'stretch_both'
+        self.timestep_importance_plot.sizing_mode = 'fixed'
+        self.timestep_importance_plot.width = 300
+
+        self.volume_plot.sizing_mode = 'stretch_both'
+        self.feature_importance_plot.sizing_mode = 'fixed'
+        self.feature_importance_plot.width = 300
+
+        # The frequency plots at the bottom
+        self.frequency_line_plot.sizing_mode = 'stretch_width'
+        self.frequency_importance_bar_plot.sizing_mode = 'stretch_width'
+
+        candlestick_row = row(
+            self.candlestick_plot, self.timestep_importance_plot,
+            sizing_mode='stretch_width'
+        )
+
+        volume_row = row(
+            self.volume_plot, self.feature_importance_plot,
+            sizing_mode='stretch_width'
+        )
+
+        frequency_row = row(
+            self.frequency_line_plot,
+            self.frequency_importance_bar_plot,
+            sizing_mode='stretch_width'
+        )
+
+        layout = column(
+            top_margin, button_row, candlestick_row, volume_row, frequency_row,
+            sizing_mode='stretch_both'
+        )
+        curdoc().add_root(layout)
+        curdoc().title = "Historical Forex Data Streaming with Candlesticks and Frequencies"
+
+# To run, instantiate Streamer with your config and run
+# Example usage:
+# config = Config(...)  # Initialize your Config object appropriately
+# streamer = Streamer(config)
+# streamer.run()

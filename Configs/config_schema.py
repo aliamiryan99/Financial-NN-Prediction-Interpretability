@@ -28,6 +28,7 @@ class Data:
     out_path: str
     exp_path: str
     interpret_path: str
+    spec_interpret_path: str
 
 @dataclass
 class StreamVisualization:
@@ -46,6 +47,7 @@ class Config:
     model: str
     data: Data
     interpretability_class: str
+    interpretation_type: str
     preprocess_parameters: PreprocessParameters
     model_parameters: ModelParameters
     stream_visualization: StreamVisualization
@@ -62,11 +64,13 @@ def load_config(config_path: str = "Configs/config.yaml") -> Config:
         data = Data(name=config_dict['data'], in_path=f"Data/{config_dict['data']}.csv",
                      out_path=f"Results/Forecasting/{config_dict['data']}/{config_dict['model']}.csv",
                      exp_path=f"Exprements/{config_dict['data']}/{config_dict['model']}",
-                     interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/{config_dict['interpretability_class']}.csv")
+                     interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/{config_dict['interpretability_class']}.csv",
+                     spec_interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/Spectral/{config_dict['interpretability_class']}.csv")
         return Config(
             model=config_dict['model'],
             data=data,
             interpretability_class=config_dict['interpretability_class'],
+            interpretation_type=config_dict['interpretation_type'],
             preprocess_parameters=preprocess_params,
             stream_visualization=stream_visualization,
             dashboard_visualization=dashboard_visualization,

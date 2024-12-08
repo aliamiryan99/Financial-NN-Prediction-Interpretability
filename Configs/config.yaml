@@ -1,7 +1,8 @@
 # Config.yaml
 model: NeuralNetworks.LSTM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
-interpretability_class: "SHAP" # ex. Perturbation, SHAP, LIME
+interpretability_class: "Perturbation" # ex. Perturbation, SHAP, LIME
+interpretation_type: "Spectral" # ex. Time Spectral
 preprocess_parameters:
   filter_holidays: True
 model_parameters:
