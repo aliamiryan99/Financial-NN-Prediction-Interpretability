@@ -36,7 +36,7 @@ class InterpretationModel(SpectralInterpretationBase):
             frequency_importances[:, f] = differences
 
         # Create a DataFrame with frequency importances
-        freq_columns = [f'freq_{f:.3f}' for f in self.frequencies]
+        freq_columns = [f'freq_{f:.5f}' for f in self.frequencies]
         df_importances = pd.DataFrame(frequency_importances, columns=freq_columns)
         return df_importances
 

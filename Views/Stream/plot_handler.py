@@ -1,9 +1,13 @@
 from bokeh.models import (
-    BoxZoomTool, DatetimeTickFormatter, HoverTool, Spinner,
-    PanTool, ResetTool, SaveTool, WheelZoomTool, Button, Div
+    BoxZoomTool, DatetimeTickFormatter, HoverTool, Spinner, Whisker,
+    PanTool, ResetTool, SaveTool, WheelZoomTool, Button, Div, FactorRange
 )
 from bokeh.layouts import column, row
 from bokeh.plotting import figure, curdoc
+from bokeh.transform import jitter
+from bokeh.transform import factor_cmap
+from bokeh.palettes import Category10, TolRainbow23, Category20, Category20b, Category20c
+
 
 class PlotCreator:
     """Create Bokeh figures for the candlestick and volume plots."""
@@ -313,22 +317,123 @@ class WidgetCreator:
                     margin-left: 20px;
                     background-color: #f9f9f9;
                 ">
-                    <b>Model:</b> {self.model_name} | 
-                    <b>Interpretability:</b> {self.interpretability_method}
+                    <b>Forecasting Model:</b> {self.model_name} | 
+                    <b>Interpretability Method:</b> {self.interpretability_method}
                 </div>
             """,
-            width=400,
+            width=500,
             height=50
         )
         return pause_button, status_div, speed_spinner, info_div
     
+class ImportanceStreamPlotCreator:
+    """Create Bokeh figures for the whisker charts of Timestep, Feature, and Frequency importance with scatter plots."""
+    def __init__(self, source_timestep_whisker, source_feature_whisker, source_frequency_whisker,
+                 source_timestep_scatter, source_feature_scatter, source_frequency_scatter, timestep_column,
+                 feature_columns, frequency_columns):
+        self.source_timestep_whisker = source_timestep_whisker
+        self.source_feature_whisker = source_feature_whisker
+        self.source_frequency_whisker = source_frequency_whisker
+
+        self.source_timestep_scatter = source_timestep_scatter
+        self.source_feature_scatter = source_feature_scatter
+        self.source_frequency_scatter = source_frequency_scatter
+
+        # Determine unique features for color mapping
+        self.timestep_features = timestep_column
+        self.feature_features = feature_columns
+        self.frequency_features = frequency_columns
+
+        # Select color palettes based on the number of features
+        print(len(self.timestep_features))
+        self.timestep_colors = Category20[len(self.timestep_features)] if len(self.timestep_features) < 20 else Category20[20] + Category20b[20] + Category20c[20]
+        print(self.timestep_colors)
+        self.feature_colors = Category20[len(self.feature_features)] if len(self.feature_features) < 20 else Category20[20] + Category20b[20] + Category20c[20]
+        self.frequency_colors = Category20[len(self.frequency_features)] if len(self.frequency_features) < 20 else Category20[20] + Category20b[20] + Category20c[20]
+
+        # Create Whisker Plots
+        self.timestep_whisker_plot = self.create_whisker_plot(
+            title="Timestep Importance Whisker Chart",
+            whisker_source=self.source_timestep_whisker,
+            scatter_source=self.source_timestep_scatter,
+            color_palette=self.timestep_colors,
+            base_label='Timestep'
+        )
+        self.feature_whisker_plot = self.create_whisker_plot(
+            title="Feature Importance Whisker Chart",
+            whisker_source=self.source_feature_whisker,
+            scatter_source=self.source_feature_scatter,
+            color_palette=self.feature_colors,
+            base_label='Feature'
+        )
+        self.frequency_whisker_plot = self.create_whisker_plot(
+            title="Frequency Importance Whisker Chart",
+            whisker_source=self.source_frequency_whisker,
+            scatter_source=self.source_frequency_scatter,
+            color_palette=self.frequency_colors,
+            base_label='Frequency'
+        )
+
+    def create_whisker_plot(self, title, whisker_source, scatter_source, color_palette, base_label):
+        plot = figure(
+            title=title,
+            x_range=FactorRange(*whisker_source.data['base']),
+            height=400,
+            sizing_mode='stretch_width',
+            toolbar_location='above',
+            tools=[PanTool(), WheelZoomTool(), BoxZoomTool(), ResetTool(), SaveTool()],
+            y_axis_label='Importance'
+        )
+
+        # Add Whisker
+        # whisker = Whisker(base="base", upper="upper", lower="lower", source=whisker_source,
+        #                  level="annotation", line_width=2)
+        # whisker.upper_head.size = 20
+        # whisker.lower_head.size = 20
+        # plot.add_layout(whisker)
+
+        # Add Scatter with factor_cmap and jitter
+        plot.scatter(
+            x=jitter('Feature', width=0.3, range=plot.x_range),
+            y='value',
+            source=scatter_source,
+            alpha=0.6,
+            size=8,
+            line_color="white",
+            color=factor_cmap('Feature', palette=color_palette, factors=whisker_source.data['base']),
+            legend_field='Feature'
+        )
+
+        # Configure Axes
+        plot.xgrid.grid_line_color = None
+        plot.xaxis.major_label_orientation = 1
+        plot.xaxis.axis_label = base_label
+
+        # Hover Tool
+        hover = HoverTool(
+            tooltips=[
+                ("Feature", "@Feature"),
+                ("Value", "@value"),
+                ("Upper (80th)", "@upper"),
+                ("Lower (20th)", "@lower")
+            ],
+            mode='mouse'
+        )
+        plot.add_tools(hover)
+
+        # Remove Legends
+        plot.legend.visible = False
+
+        return plot
+
 class LayoutManager:
     """Arrange the layout and add to the document."""
     def __init__(
-        self, pause_button, speed_spinner, status_div,
+        self, pause_button, speed_spinner, status_div, info_div,
         candlestick_plot, volume_plot,
         feature_importance_plot, timestep_importance_plot,
-        frequency_line_plot, frequency_importance_bar_plot, info_div
+        frequency_line_plot, frequency_importance_bar_plot,
+        timestep_whisker_plot, feature_whisker_plot, frequency_whisker_plot
     ):
         self.pause_button = pause_button
         self.speed_spinner = speed_spinner
@@ -340,12 +445,18 @@ class LayoutManager:
         self.timestep_importance_plot = timestep_importance_plot
         self.frequency_line_plot = frequency_line_plot
         self.frequency_importance_bar_plot = frequency_importance_bar_plot
+        self.timestep_whisker_plot = timestep_whisker_plot
+        self.feature_whisker_plot = feature_whisker_plot
+        self.frequency_whisker_plot = frequency_whisker_plot
         self.create_layout()
 
     def create_layout(self):
-        left_margin = Div(width=50, height=30)
+        # Top layout with buttons and info
         button_row = row(
-            left_margin, self.pause_button, self.speed_spinner, self.status_div, self.info_div,
+            self.pause_button, 
+            self.speed_spinner, 
+            self.status_div,
+            self.info_div,
             sizing_mode='stretch_width',
             width=800,
             css_classes=['centered-row'],
@@ -366,6 +477,7 @@ class LayoutManager:
         self.frequency_line_plot.sizing_mode = 'stretch_width'
         self.frequency_importance_bar_plot.sizing_mode = 'stretch_width'
 
+        # Existing plot rows
         candlestick_row = row(
             self.candlestick_plot, self.timestep_importance_plot,
             sizing_mode='stretch_width'
@@ -382,9 +494,23 @@ class LayoutManager:
             sizing_mode='stretch_width'
         )
 
+        # New whisker layout: timestep in one row, feature and frequency in the next
+        timestep_whisker_row = row(
+            self.timestep_whisker_plot,
+            sizing_mode='stretch_width'
+        )
+
+        other_whiskers_row = row(
+            self.feature_whisker_plot,
+            self.frequency_whisker_plot,
+            sizing_mode='stretch_width'
+        )
+
+        # Combine all layouts
         layout = column(
             top_margin, button_row, candlestick_row, volume_row, frequency_row,
+            timestep_whisker_row, other_whiskers_row,
             sizing_mode='stretch_both'
         )
         curdoc().add_root(layout)
-        curdoc().title = "Historical Forex Data Streaming with Candlesticks and Frequencies"
+        curdoc().title = "Historical Forex Data Streaming with Whisker Plots and Scatter"

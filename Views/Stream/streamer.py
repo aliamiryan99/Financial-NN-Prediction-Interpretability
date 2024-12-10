@@ -1,4 +1,7 @@
+# Views/Stream/streamer.py
+
 from bokeh.plotting import curdoc
+import numpy as np
 
 from Configs.config_schema import Config 
 from Views.Stream.data_handler import (
@@ -7,7 +10,7 @@ from Views.Stream.data_handler import (
 )
 from Views.Stream.plot_handler import (
     PlotCreator, InterpretabilityPlotCreator,
-    FrequencyPlotCreator, WidgetCreator, LayoutManager
+    FrequencyPlotCreator, WidgetCreator, LayoutManager, ImportanceStreamPlotCreator
 )
 
 class Streamer:
@@ -59,7 +62,20 @@ class Streamer:
             config.model_parameters.feature_columns,
             self.frequency_data_loader.frequency_labels
         )
-
+        
+        # Create importance whisker plots with scatter
+        self.importance_stream_plot_creator = ImportanceStreamPlotCreator(
+            self.data_source_manager.source_timestep_whisker,
+            self.data_source_manager.source_feature_whisker,
+            self.data_source_manager.source_frequency_whisker,
+            self.data_source_manager.source_timestep_scatter,
+            self.data_source_manager.source_feature_scatter,
+            self.data_source_manager.source_frequency_scatter,
+            feature_columns=config.model_parameters.feature_columns,
+            timestep_column=self.interpretability_data_loader.timestep_columns,
+            frequency_columns=self.frequency_data_loader.frequency_labels,
+        )
+        
         # Create widgets
         self.widget_creator = WidgetCreator(
             self.config_loader.UPDATE_INTERVAL,
@@ -69,42 +85,51 @@ class Streamer:
         
         # Initialize stream updater
         self.stream_updater = StreamUpdater(
-            self.data_loader.df,
-            self.interpretability_data_loader.feature_importance_df,
-            self.interpretability_data_loader.timestep_importance_df,
-            self.frequency_data_loader.frequencies_df,
-            self.frequency_data_loader.frequency_importance_df,
-            self.data_source_manager.source_price,
-            self.data_source_manager.source_volume,
-            self.data_source_manager.source_feature_importance,
-            self.data_source_manager.source_timestep_importance,
-            self.data_source_manager.source_frequencies,
-            self.data_source_manager.source_frequency_importance,
-            config.model_parameters.feature_columns,
-            self.interpretability_data_loader.timestep_columns,
-            self.frequency_data_loader.frequency_labels,
-            self.config_loader.BATCH_SIZE,
-            self.config_loader.MAX_POINTS,
-            self.config_loader.show_aggregator,
-            self.plot_creator.offset,
-            self.config_loader.UPDATE_INTERVAL,
-            self.widget_creator.pause_button,
-            self.widget_creator.status_div,
-            self.widget_creator.speed_spinner
+            df=self.data_loader.df,
+            feature_importance_df=self.interpretability_data_loader.feature_importance_df,
+            timestep_importance_df=self.interpretability_data_loader.timestep_importance_df,
+            frequencies_df=self.frequency_data_loader.frequencies_df,
+            frequency_importance_df=self.frequency_data_loader.frequency_importance_df,
+            source_price=self.data_source_manager.source_price,
+            source_volume=self.data_source_manager.source_volume,
+            source_feature_importance=self.data_source_manager.source_feature_importance,
+            source_timestep_importance=self.data_source_manager.source_timestep_importance,
+            source_frequencies=self.data_source_manager.source_frequencies,
+            source_frequency_importance=self.data_source_manager.source_frequency_importance,
+            source_timestep_whisker=self.data_source_manager.source_timestep_whisker,
+            source_feature_whisker=self.data_source_manager.source_feature_whisker,
+            source_frequency_whisker=self.data_source_manager.source_frequency_whisker,
+            source_timestep_scatter=self.data_source_manager.source_timestep_scatter,
+            source_feature_scatter=self.data_source_manager.source_feature_scatter,
+            source_frequency_scatter=self.data_source_manager.source_frequency_scatter,
+            feature_columns=config.model_parameters.feature_columns,
+            timestep_columns=self.interpretability_data_loader.timestep_columns,
+            frequency_labels=self.frequency_data_loader.frequency_labels,
+            batch_size=self.config_loader.BATCH_SIZE,
+            max_points=self.config_loader.MAX_POINTS,
+            show_aggregator=self.config_loader.show_aggregator,
+            offset=self.plot_creator.offset,
+            update_interval=self.config_loader.UPDATE_INTERVAL,
+            pause_button=self.widget_creator.pause_button,
+            status_div=self.widget_creator.status_div,
+            speed_spinner=self.widget_creator.speed_spinner
         )
         
         # Arrange layout
         self.layout_manager = LayoutManager(
-            self.widget_creator.pause_button,
-            self.widget_creator.speed_spinner,
-            self.widget_creator.status_div,
-            self.plot_creator.candlestick_plot,
-            self.plot_creator.volume_plot,
-            self.interpretability_plot_creator.feature_importance_plot,
-            self.interpretability_plot_creator.timestep_importance_plot,
-            self.frequency_plot_creator.frequency_line_plot,
-            self.frequency_plot_creator.frequency_importance_bar_plot,
-            self.widget_creator.info_div
+            pause_button=self.widget_creator.pause_button,
+            speed_spinner=self.widget_creator.speed_spinner,
+            status_div=self.widget_creator.status_div,
+            info_div=self.widget_creator.info_div,
+            candlestick_plot=self.plot_creator.candlestick_plot,
+            volume_plot=self.plot_creator.volume_plot,
+            feature_importance_plot=self.interpretability_plot_creator.feature_importance_plot,
+            timestep_importance_plot=self.interpretability_plot_creator.timestep_importance_plot,
+            frequency_line_plot=self.frequency_plot_creator.frequency_line_plot,
+            frequency_importance_bar_plot=self.frequency_plot_creator.frequency_importance_bar_plot,
+            timestep_whisker_plot=self.importance_stream_plot_creator.timestep_whisker_plot,
+            feature_whisker_plot=self.importance_stream_plot_creator.feature_whisker_plot,
+            frequency_whisker_plot=self.importance_stream_plot_creator.frequency_whisker_plot
         )
         
         # Start streaming
@@ -122,6 +147,8 @@ class StreamUpdater:
         source_price, source_volume,
         source_feature_importance, source_timestep_importance,
         source_frequencies, source_frequency_importance,
+        source_timestep_whisker, source_feature_whisker, source_frequency_whisker,
+        source_timestep_scatter, source_feature_scatter, source_frequency_scatter,
         feature_columns, timestep_columns, frequency_labels,
         batch_size, max_points,
         show_aggregator, offset, update_interval, pause_button, status_div, speed_spinner
@@ -138,6 +165,13 @@ class StreamUpdater:
         self.source_timestep_importance = source_timestep_importance
         self.source_frequencies = source_frequencies
         self.source_frequency_importance = source_frequency_importance
+
+        self.source_timestep_whisker = source_timestep_whisker
+        self.source_feature_whisker = source_feature_whisker
+        self.source_frequency_whisker = source_frequency_whisker
+        self.source_timestep_scatter = source_timestep_scatter
+        self.source_feature_scatter = source_feature_scatter
+        self.source_frequency_scatter = source_frequency_scatter
 
         self.feature_columns = feature_columns
         self.timestep_columns = timestep_columns
@@ -174,6 +208,7 @@ class StreamUpdater:
             print("All data has been streamed.")
             return
 
+        # make new data samples 
         new_data = self.df.iloc[self.current_index:end_index]
         new_feature_importance = self.feature_importance_df.iloc[self.current_index:end_index]
         new_timestep_importance = self.timestep_importance_df.iloc[self.current_index:end_index]
@@ -241,6 +276,67 @@ class StreamUpdater:
             'Importance': latest_freq_importance
         }
 
+        # Update whisker charts
+        # Stream scatter data
+        # For each importance type, append the new values to the scatter sources
+        # Stream Feature Importance Scatter
+        feature_scatter_new = {'Feature': [], 'value': []}
+        for index, feature in enumerate(self.feature_columns):
+            value = latest_feature_importance[index]
+            feature_scatter_new['Feature'].append(feature)
+            feature_scatter_new['value'].append(value)
+        self.source_feature_scatter.stream(feature_scatter_new, rollover=self.MAX_POINTS)
+
+        # Stream Timestep Importance Scatter
+        timestep_scatter_new = {'Feature': [], 'value': []}
+        for index, feature in enumerate(self.timestep_columns):
+            value = latest_timestep_importance[index]
+            timestep_scatter_new['Feature'].append(feature)
+            timestep_scatter_new['value'].append(value)
+        self.source_timestep_scatter.stream(timestep_scatter_new, rollover=self.MAX_POINTS)
+
+        # Stream Frequency Importance Scatter
+        frequency_scatter_new = {'Feature': [], 'value': []}
+        for index, feature in enumerate(self.frequency_labels):
+            value = latest_freq_importance[index]
+            frequency_scatter_new['Feature'].append(feature)
+            frequency_scatter_new['value'].append(value)
+        self.source_frequency_scatter.stream(frequency_scatter_new, rollover=self.MAX_POINTS)
+
+    #    # Compute Quantiles and Update Whisker Data Sources
+    #     def compute_and_update_quantiles(scatter_source, whisker_source):
+    #         upper_quantiles = []
+    #         lower_quantiles = []
+    #         for feature in scatter_source.data['Feature']:
+    #             # Filtering values for the current feature
+    #             mask = np.array(scatter_source.data['Feature']) == feature
+    #             feature_values = np.array(scatter_source.data['value'])[mask]
+    #             if len(feature_values) >= 5:
+    #                 upper = np.quantile(feature_values, 0.80)
+    #                 lower = np.quantile(feature_values, 0.20)
+    #             elif len(feature_values) > 0:
+    #                 upper = np.max(feature_values)
+    #                 lower = np.min(feature_values)
+    #             else:
+    #                 upper = 0
+    #                 lower = 0
+    #             upper_quantiles.append(upper)
+    #             lower_quantiles.append(lower)
+    #         whisker_source.data = dict(
+    #             base=whisker_source.data['base'],
+    #             upper=upper_quantiles,
+    #             lower=lower_quantiles
+    #         )
+
+    #     # Update Feature Importance Whiskers
+    #     compute_and_update_quantiles(self.source_feature_scatter, self.source_feature_whisker)
+
+    #     # Update Timestep Importance Whiskers
+    #     compute_and_update_quantiles(self.source_timestep_scatter, self.source_timestep_whisker)
+
+    #     # Update Frequency Importance Whiskers
+    #     compute_and_update_quantiles(self.source_frequency_scatter, self.source_frequency_whisker)
+
         self.current_index = end_index
 
         if self.current_index >= self.TOTAL_POINTS:
@@ -275,10 +371,3 @@ class StreamUpdater:
 
     def add_periodic_callback(self):
         self.callback_id = curdoc().add_periodic_callback(self.update, self.UPDATE_INTERVAL)
-
-# Example usage:
-# Ensure that you initialize your Config object appropriately
-# from Configs.config_schema import Config
-# config = Config(...)  # Initialize with actual parameters
-# streamer = Streamer(config)
-# streamer.run()

@@ -83,9 +83,27 @@ class SpectralInterpretationBase(ABC):
         fft_data = fft_data[:, :fft_data.shape[1] // 2 + 1, :]
         # Get the corresponding frequency components
         freq_length = fft_data.shape[1]
-        sampling_rate = 3600  # Assuming H1 time frame;
+        sampling_rate = 1/3600  # Assuming H1 time frame;
         frequencies = np.abs(np.fft.fftfreq(X.shape[1], d=1/sampling_rate)[:freq_length])
         return fft_data, frequencies
+
+    def inverse_fft(self, fft_data):
+        """
+        Reconstruct the time-domain signal from perturbed FFT data.
+        
+        :param fft_data: FFT-transformed data with perturbations, shape (num_samples, freq_length, num_features)
+        :return: Reconstructed time-domain data, shape (num_samples, seq_length, num_features)
+        """
+        num_samples, freq_length, num_features = fft_data.shape
+        seq_lenght = self.config.model_parameters.seq_length
+        # Reconstruct the full FFT by mirroring the positive frequencies
+        full_fft = np.zeros((num_samples, seq_lenght, num_features), dtype=np.complex_)
+        full_fft[:, :freq_length, :] = fft_data
+        # Mirror the FFT data for negative frequencies
+        full_fft[:, freq_length:, :] = np.conj(fft_data[:, 1:seq_lenght - freq_length + 1, :][:, ::-1, :])
+        # Perform inverse FFT
+        X_reconstructed = np.fft.ifft(full_fft, axis=1).real
+        return X_reconstructed
 
     def save_fft_data(self, fft_data, frequencies, path):
         """
@@ -106,7 +124,7 @@ class SpectralInterpretationBase(ABC):
         ordered_data = []
         for feat_idx, feat_name in enumerate(feature_columns):
             for freq_idx, freq in enumerate(frequencies):
-                columns.append(f"{feat_name}_freq_{abs(freq):.3f}")
+                columns.append(f"{feat_name}_freq_{abs(freq):.5f}")
                 # Extract corresponding data for the feature-frequency pair
                 ordered_data.append(fft_data[:, freq_idx, feat_idx])
         

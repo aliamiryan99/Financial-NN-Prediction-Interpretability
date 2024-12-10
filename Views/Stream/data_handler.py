@@ -111,7 +111,7 @@ class FrequencyDataLoader:
         return list(self.frequency_importance_df.columns)
 
 class DataSourceManager:
-    """Initialize ColumnDataSources for price, volume, interpretability, frequency data."""
+    """Initialize ColumnDataSources for price, volume, interpretability, frequency data, and whisker plots."""
     def __init__(self, feature_columns, timestep_columns, frequency_labels):
         self.source_price = self.initialize_price_source()
         self.source_volume = self.initialize_volume_source()
@@ -119,6 +119,16 @@ class DataSourceManager:
         self.source_timestep_importance = self.initialize_timestep_importance_source(timestep_columns)
         self.source_frequencies = self.initialize_frequencies_source(frequency_labels, feature_columns)
         self.source_frequency_importance = self.initialize_frequency_importance_source(frequency_labels)
+        
+        # Whisker Data Sources
+        self.source_timestep_whisker = self.initialize_whisker_source(timestep_columns)
+        self.source_feature_whisker = self.initialize_whisker_source(feature_columns)
+        self.source_frequency_whisker = self.initialize_whisker_source(frequency_labels)
+
+        # Scatter Data Sources
+        self.source_timestep_scatter = self.initialize_scatter_source()
+        self.source_feature_scatter = self.initialize_scatter_source()
+        self.source_frequency_scatter = self.initialize_scatter_source()
 
     @staticmethod
     def initialize_price_source():
@@ -171,4 +181,19 @@ class DataSourceManager:
         return ColumnDataSource(data=dict(
             Frequency=frequency_labels,
             Importance=[0]*len(frequency_labels)
+        ))
+
+    @staticmethod
+    def initialize_whisker_source(feature_columns):
+        return ColumnDataSource(data=dict(
+            base=feature_columns,
+            upper=[0]*len(feature_columns),
+            lower=[0]*len(feature_columns)
+        ))
+
+    @staticmethod
+    def initialize_scatter_source():
+        return ColumnDataSource(data=dict(
+            Feature=[],   # Feature name
+            value=[]      # Corresponding importance value
         ))
