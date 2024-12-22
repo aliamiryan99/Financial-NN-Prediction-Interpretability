@@ -80,7 +80,8 @@ class Streamer:
         self.widget_creator = WidgetCreator(
             self.config_loader.UPDATE_INTERVAL,
             config.model,  
-            config.interpretability_class
+            config.time_interpretability_class,
+            config.spectral_interpretability_class
         )
         
         # Initialize stream updater

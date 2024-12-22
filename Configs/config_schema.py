@@ -39,19 +39,20 @@ class StreamVisualization:
     show_aggregator: bool
 
 @dataclass
-class DashboardVisualization:
+class EvaluationVisualization:
     n_cols: int
 
 @dataclass
 class Config:
     model: str
     data: Data
-    interpretability_class: str
-    interpretation_type: str
+    time_interpretability_class: str
+    spectral_interpretability_class: str
+    interpretability_type: str
     preprocess_parameters: PreprocessParameters
     model_parameters: ModelParameters
     stream_visualization: StreamVisualization
-    dashboard_visualization: DashboardVisualization
+    evaluation_visualization: EvaluationVisualization
 
 # Utility function to load the YAML config
 def load_config(config_path: str = "Configs/config.yaml") -> Config:
@@ -60,20 +61,21 @@ def load_config(config_path: str = "Configs/config.yaml") -> Config:
         model_params = ModelParameters(**config_dict['model_parameters'])
         preprocess_params = PreprocessParameters(**config_dict['preprocess_parameters'])
         stream_visualization = StreamVisualization(**config_dict['stream_visualization'])
-        dashboard_visualization = DashboardVisualization(**config_dict['dashboard_visualization'])
+        evaluation_visualization = EvaluationVisualization(**config_dict['evaluation_visualization'])
         data = Data(name=config_dict['data'], in_path=f"Data/{config_dict['data']}.csv",
                      out_path=f"Results/Forecasting/{config_dict['data']}/{config_dict['model']}.csv",
                      exp_path=f"Exprements/{config_dict['data']}/{config_dict['model']}",
-                     interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/{config_dict['interpretability_class']}.csv",
-                     spec_interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/Spectral/{config_dict['interpretability_class']}.csv")
+                     interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/{config_dict['time_interpretability_class']}.csv",
+                     spec_interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/Spectral/{config_dict['spectral_interpretability_class']}.csv")
         return Config(
             model=config_dict['model'],
             data=data,
-            interpretability_class=config_dict['interpretability_class'],
-            interpretation_type=config_dict['interpretation_type'],
+            time_interpretability_class=config_dict['time_interpretability_class'],
+            spectral_interpretability_class=config_dict['spectral_interpretability_class'],
+            interpretability_type=config_dict['interpretability_type'],
             preprocess_parameters=preprocess_params,
             stream_visualization=stream_visualization,
-            dashboard_visualization=dashboard_visualization,
+            evaluation_visualization=evaluation_visualization,
             model_parameters=model_params
         )
     

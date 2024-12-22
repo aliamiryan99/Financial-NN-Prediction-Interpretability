@@ -6,7 +6,7 @@ from bokeh.layouts import column, row
 from bokeh.plotting import figure, curdoc
 from bokeh.transform import jitter
 from bokeh.transform import factor_cmap
-from bokeh.palettes import Category10, TolRainbow23, Category20, Category20b, Category20c
+from bokeh.palettes import Category20, Category20b, Category20c
 
 
 class PlotCreator:
@@ -290,10 +290,11 @@ class FrequencyPlotCreator:
 
 class WidgetCreator:
     """Create interactive widgets (buttons, spinners, etc.)."""
-    def __init__(self, update_interval, model_name, interpretability_method):
+    def __init__(self, update_interval, model_name, time_interpretability_method, frequencies_interpretability_method):
         self.update_interval = update_interval
         self.model_name = model_name
-        self.interpretability_method = interpretability_method
+        self.time_interpretability_method = time_interpretability_method
+        self.frequencies_interpretability_method = frequencies_interpretability_method
         self.pause_button, self.status_div, self.speed_spinner, self.info_div = self.create_widgets()
 
     def create_widgets(self):
@@ -318,10 +319,11 @@ class WidgetCreator:
                     background-color: #f9f9f9;
                 ">
                     <b>Forecasting Model:</b> {self.model_name} | 
-                    <b>Interpretability Method:</b> {self.interpretability_method}
+                    <b>Time Interpretability Method:</b> {self.time_interpretability_method} |
+                    <b>Frequencies Interpretability Method:</b> {self.frequencies_interpretability_method}
                 </div>
             """,
-            width=500,
+            width=1000,
             height=50
         )
         return pause_button, status_div, speed_spinner, info_div

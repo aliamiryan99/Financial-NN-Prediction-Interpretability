@@ -177,7 +177,7 @@ Evaluation Charts <br/> <img src="Results/Evaluations.png" alt="Dashboard Plot S
 </div>
 
 <div align="center">
-   The total streaming frames <img src="Results/TheStream.gif" alt="Stream Visualization" width="600"/>
+   The total streaming frames <br/> <img src="Results/TheStream.gif" alt="Stream Visualization" width="600"/>
 </div>
 
 <br />

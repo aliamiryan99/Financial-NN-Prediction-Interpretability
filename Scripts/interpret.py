@@ -22,8 +22,14 @@ def main():
     config: Config = load_config()
     model_path = config.model  # e.g., 'NeuralNetworks.LSTM'
 
+    # Extract the interpretation class name and type
+    time_interpretation_class, spectral_interpretation_class, interpretation_type = config.time_interpretability_class,\
+          config.spectral_interpretability_class, config.interpretability_type
+
+    interpretation_class = time_interpretation_class if interpretation_type == "Time" else spectral_interpretation_class
+
     # Log the model path name
-    print(f"#########  Interpreting {model_path} with {config.interpretability_class} ( Type : {config.interpretation_type}) #########")
+    print(f"#########  Interpreting {model_path} with {interpretation_class} ( Type : {interpretation_type}) #########")
 
     # Full model path
     full_model_path = 'Models.' + model_path + ".model"
@@ -59,7 +65,6 @@ def main():
     forecasting_model.scalers = scalers
 
     # Import the interpretation class
-    interpretation_class, interpretation_type = config.interpretability_class, config.interpretation_type
     interpretation_class_path = 'Interpretations.' + interpretation_type + "." + interpretation_class + '.model'
     try:
         interpretation_module = importlib.import_module(interpretation_class_path)
