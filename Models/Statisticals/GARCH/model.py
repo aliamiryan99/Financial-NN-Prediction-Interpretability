@@ -6,7 +6,7 @@ import pandas as pd
 from arch import arch_model  # Import GARCH model from the 'arch' library
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import (
+from Modules.ModelModules.modules import (
     preprocess_data,
     scale_data,
     split_data

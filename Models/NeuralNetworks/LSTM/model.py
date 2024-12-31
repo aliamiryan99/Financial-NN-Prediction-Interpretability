@@ -4,7 +4,7 @@ from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.models import Sequential
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import create_sequences
+from Modules.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 class ForecastingModel(ModelBase):

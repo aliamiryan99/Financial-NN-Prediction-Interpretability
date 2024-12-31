@@ -5,7 +5,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, LSTM, Dense, Flatten, Dropout
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import create_sequences
+from Modules.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 warnings.filterwarnings("ignore")  # Suppress warnings
@@ -59,10 +59,13 @@ class ForecastingModel(ModelBase):
     def train(self, X_train, y_train):
         if self.model is None:
             raise Exception("Model needs to be built before training.")
+        # Get validation split from config or set default to 0.1
+        validation_split = getattr(self.config.model_parameters, 'validation_split', 0.1)
         # Fit the model with training data
-        self.model.fit(
+        self.history = self.model.fit(
             X_train, y_train, epochs=self.config.model_parameters.epochs, 
-            batch_size=self.config.model_parameters.batch_size, verbose=self.config.model_parameters.verbose)
+            batch_size=self.config.model_parameters.batch_size, verbose=self.config.model_parameters.verbose,
+            validation_split=validation_split)
 
     def forecast(self, X_test):
         if self.model is None:

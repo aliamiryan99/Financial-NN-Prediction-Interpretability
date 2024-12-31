@@ -7,7 +7,7 @@ import yaml  # Import for YAML serialization
 
 from abc import ABC, abstractmethod
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import (preprocess_data, scale_data,
+from Modules.ModelModules.modules import (preprocess_data, scale_data,
                                               split_data, create_sequences)
 from Utils.io import load_data, save_forecasting_results
 from tensorflow.keras.utils import plot_model

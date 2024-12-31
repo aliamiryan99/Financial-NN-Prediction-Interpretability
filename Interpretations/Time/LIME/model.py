@@ -1,84 +1,65 @@
+# Interpretations/Time/LIME/model.py
+
 import numpy as np
 from tqdm import tqdm
 from lime.lime_tabular import LimeTabularExplainer
 from Interpretations.Time.interpretation_base import InterpretationBase
 
 class InterpretationModel(InterpretationBase):
-
     def interpret(self, X_test):
         """
-        Calculates the importance of features and timesteps separately using LIME.
-        :param X_test: Input data to be interpreted, shape (num_samples, seq_length, num_features)
-        :return: An ndarray where each row corresponds to a single prediction and each column represents the importance of a feature or timestep.
+        Return a 3D array (N, T, F) of LIME attributions.
         """
-        self.num_samples, self.seq_length, self.num_features = X_test.shape
-        
-        # Flatten the data for models like XGBoost, RandomForest, etc.
-        if len(X_test.shape) == 3:
-            # For LSTM, reshape it to (num_samples, seq_length * num_features)
-            X_test_flat = X_test.reshape(self.num_samples, -1)
-        else:
-            # For models like XGBoost or RandomForest, ensure the input is already flat
-            X_test_flat = X_test
+        num_samples, seq_length, num_features = X_test.shape
 
-        # Create the feature names by combining the time step and feature name
-        feature_names = [f"Feature_{i+1}_Timestep_{t+1}" for t in range(self.seq_length) for i in range(self.num_features)]
+        # Flatten X_test for LIME
+        X_test_flat = X_test.reshape(num_samples, -1)
 
-        # Initialize the LIME Explainer
+        # Create feature names
+        feature_names = [
+            f"Feature_{f + 1}_Timestep_{t + 1}"
+            for t in range(seq_length)
+            for f in range(num_features)
+        ]
+
+        # Create the LimeTabularExplainer
         self.lime_explainer = LimeTabularExplainer(
             training_data=X_test_flat,
-            mode="regression",  # Or "classification" depending on your model
+            mode="regression",
             feature_names=feature_names,
-            class_names=["Prediction"]  # Can be customized depending on the model's output
+            class_names=["Prediction"]
         )
-        
-        feature_importances = np.zeros((self.num_samples, self.num_features))
-        timestep_importances = np.zeros((self.num_samples, self.seq_length))
+
+        # This will store (N, T, F)
+        lime_importances_3d = np.zeros((num_samples, seq_length, num_features), dtype=np.float32)
 
         print("Interpreting sample predictions with LIME...")
+        for i in tqdm(range(num_samples)):
+            # We need a predict method that accepts flattened input
+            def _predict_local(instance):
+                # instance shape => (1, T*F)
+                # reshape back to (1, T, F) for LSTM
+                instance_reshaped = instance.reshape(-1, seq_length, num_features)
+                return self.forecasting_model.model.predict(instance_reshaped)
 
-        for i in tqdm(range(self.num_samples)):
-            # Get the instance to explain (flattened or original shape)
-            instance = X_test[i].reshape(1, -1)
-
-            # Alter predict method for models with sequence
-            predict_method = self.forecasting_model.model.predict
-            if len(X_test.shape) == 3:
-                predict_method = self._predict_with_sequence
-            
-            # Use LIME's explain_instance method
+            # Explain this sample
             explanation = self.lime_explainer.explain_instance(
-                instance.flatten(), 
-                predict_method, 
-                num_features=self.seq_length*self.num_features,
+                X_test_flat[i],
+                _predict_local, 
+                num_features=seq_length * num_features,
                 num_samples=100
             )
 
-            # Extract feature importances from LIME's explanation (flattened feature importance)
-            explanation_local_exp = explanation.local_exp[0]  # Explanation for class 0 (for regression, there's only one class)
-            feature_importance_values = np.array([exp[1] for exp in explanation_local_exp])  # Get the importance values for all features
+            # LIME returns a list of (feature_index, weight) pairs in explanation.local_exp[0].
+            # We'll fill them into a shape => (T, F)
+            local_exp = dict(explanation.local_exp[0])  # dict: feature_idx -> weight
 
-            # Sum importances across timesteps for each feature
-            for feature_idx in range(self.num_features):
-                feature_importances[i, feature_idx] = np.sum(feature_importance_values[feature_idx::self.num_features])
+            # Now local_exp[k] is the importance weight for flatten-index k
+            # We map k -> (t, f) and assign => lime_importances_3d[i, t, f]
+            for k, weight in local_exp.items():
+                # Flatten index k => t, f
+                t = k // num_features
+                f = k % num_features
+                lime_importances_3d[i, t, f] = weight
 
-            # Sum importances across features for each timestep
-            for timestep_idx in range(self.seq_length):
-                timestep_importances[i, timestep_idx] = np.sum(feature_importance_values[timestep_idx*self.num_features:(timestep_idx+1)*self.num_features])
-
-        # Combine the results for features and timesteps
-        importance_results = np.concatenate([feature_importances, timestep_importances], axis=1)
-        return importance_results
-
-    def _predict_with_sequence(self, X):
-        """
-        Reshapes the input X into the required shape for LSTM models (num_samples, seq_length, num_features).
-        This function is used only for models that require sequential input.
-        :param X: Input data, shape (num_samples, seq_length * num_features)
-        :param num_sequence: Number of time steps (seq_length)
-        :param num_features: Number of features per time step
-        :return: reshaped input X of shape (num_samples, seq_length, num_features)
-        """
-        # Reshape the input data to (num_samples, seq_length, num_features)
-        X_reshaped = X.reshape(-1, self.seq_length, self.num_features)
-        return self.forecasting_model.model.predict(X_reshaped)
+        return lime_importances_3d

@@ -3,7 +3,7 @@ import warnings
 from sklearn.ensemble import GradientBoostingRegressor  # Import Gradient Boosting Regressor
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import create_sequences
+from Modules.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 warnings.filterwarnings("ignore")  # Suppress warnings

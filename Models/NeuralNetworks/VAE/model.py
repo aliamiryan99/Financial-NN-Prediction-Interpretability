@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Input, LSTM, RepeatVector, Dense, Lambda, Ti
 from tensorflow.keras.optimizers import Adam
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import (
+from Modules.ModelModules.modules import (
     preprocess_data,
     scale_data,
     split_data

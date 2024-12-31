@@ -5,7 +5,7 @@ from tensorflow.keras.models import Model
 import numpy as np
 
 from Configs.config_schema import Config
-from Controllers.ModelModules.modules import create_sequences
+from Modules.ModelModules.modules import create_sequences
 from Models.model_base import ModelBase  # Assuming ModelBase is in Controllers.ModelBase
 
 class ForecastingModel(ModelBase):
@@ -66,16 +66,18 @@ class ForecastingModel(ModelBase):
     def train(self, X_train, y_train):
         if self.model is None:
             raise Exception("Model needs to be built before training.")
-
+        # Get validation split from config or set default to 0.1
+        validation_split = getattr(self.config.model_parameters, 'validation_split', 0.1)
         # Reshape y_train to match the output shape
         y_train = y_train.reshape(-1, 1)
 
-        self.model.fit(
+        self.history = self.model.fit(
             X_train,
             y_train,
             epochs=self.config.model_parameters.epochs,
             batch_size=self.config.model_parameters.batch_size,
-            verbose=self.config.model_parameters.verbose
+            verbose=self.config.model_parameters.verbose,
+            validation_split=validation_split
         )
 
     def forecast(self, X_test):

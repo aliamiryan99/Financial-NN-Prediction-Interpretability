@@ -17,7 +17,7 @@ project_root = os.path.dirname(script_dir)
 sys.path.insert(0, project_root)
 
 # Import necessary modules for data preparation
-from Controllers.ModelModules.modules import preprocess_data, scale_data, split_data
+from Modules.ModelModules.modules import preprocess_data, scale_data, split_data
 from Utils.io import load_data
 from Configs.config_schema import Config, load_config
 
