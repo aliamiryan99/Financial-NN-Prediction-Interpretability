@@ -46,8 +46,9 @@ The configuration for the models is located in `Configs/config.yml`. You can spe
 # Config.yaml
 model: NeuralNetworks.LSTM # ex. NeuralNetworks.LSTM, NeuralNetworks.BiLSTM, etc.
 data: ForexData/XAUUSD_H1
-interpretability_class: "Perturbation" # ex. Perturbation, SHAP, LIME
-interpretation_type: "Time" # ex. Time, Spectral
+time_interpretability_class: "SHAP" # ex. Occlusion, SHAP, LIME, RISE
+spectral_interpretability_class: "Occlusion" # ex. Occlusion, RISE
+interpretability_type: "Time" # ex. Time, Spectral
 preprocess_parameters:
   filter_holidays: True
 model_parameters:
@@ -66,9 +67,10 @@ stream_visualization:
   update_interval: 50 # Initial streaming interval in ms
   max_points: 500 # Maximum number of points to display
   time_frame: "H" # Time frame to specify the width of candles
-  show_aggregator: False # To change the stream approach for plotting the ensemble method with range
-dashboard_visualization:
+  show_aggregator: False # To change the stream approch for plotting the ensemble method with range
+evaluation_visualization:
   n_cols: 3 # Number of column grid of loss charts
+
 ```
 
 ### 3. Training and Testing the Model

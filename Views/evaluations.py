@@ -47,7 +47,7 @@ class ConfigLoader:
     def load_config(self):
         self.results_folder = os.path.dirname(self.config.data.out_path)
         self.metrics = ['MSE', 'RMSE', 'MAE', 'R-squared', 'ASE', 'MBD']
-        self.ncols = self.config.dashboard_visualization.n_cols
+        self.ncols = self.config.evaluation_visualization.n_cols
         symbol = self.config.data.name.split('/')[-1]
         self.title_text = f"{symbol} Volume Prediction Loss Functions"
 

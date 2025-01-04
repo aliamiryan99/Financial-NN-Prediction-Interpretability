@@ -28,6 +28,7 @@ class Data:
     out_path: str
     exp_path: str
     interpret_path: str
+    interpret_evaluation_path: str
     spec_interpret_path: str
 
 @dataclass
@@ -66,6 +67,7 @@ def load_config(config_path: str = "Configs/config.yaml") -> Config:
                      out_path=f"Results/Forecasting/{config_dict['data']}/{config_dict['model']}.csv",
                      exp_path=f"Exprements/{config_dict['data']}/{config_dict['model']}",
                      interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/{config_dict['time_interpretability_class']}.csv",
+                     interpret_evaluation_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/evaluations.csv",
                      spec_interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/Spectral/{config_dict['spectral_interpretability_class']}.csv")
         return Config(
             model=config_dict['model'],
