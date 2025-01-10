@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LSTM Visualization</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Header Bar -->
+  <header id="header-bar">
+    <div id="header-left">
+      <div class="project-name">Financial NN Prediction Interpretability</div>
+      <div class="subtitle">LSTM Interpretability Interactable Visualization</div>
+    </div>
+    <!-- Center container to truly center items -->
+    <div id="header-center">
+      <div class="property">
+        <span class="label">Model:</span>
+        <div class="value">LSTM</div>
+      </div>
+      <div class="property">
+        <span class="label">Instance Time:</span>
+        <div class="value">2024-09-11 12:00:00</div>
+      </div>
+      <div class="property">
+        <span class="label">Interpretability Method:</span>
+        <div class="value">Occlusion</div>
+      </div>
+    </div>
+    <div id="header-right">
+      <!-- Link to the paper (placeholder) -->
+      <a href="https://your-paper-link.com" target="_blank">
+        <img src="https://img.icons8.com/ios-filled/24/ffffff/document--v1.png"
+             alt="Paper" title="View Paper" />
+      </a>
+      <!-- A placeholder logo -->
+      <img src="https://img.icons8.com/ios-filled/24/ffffff/bolt.png"
+           alt="Logo" title="Logo" />
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <div id="toolbar-center">
+      <button id="reset-zoom-btn" class="reset-btn" title="Reset Zoom">
+        <img src="https://img.icons8.com/ios-filled/20/000000/cursor.png" alt="Reset" />
+      </button>
+
+      <label for="units-count">Number of Units:</label>
+      <input type="range" id="units-count" name="units-count" min="1" max="50" value="10" />
+      <span id="units-label">10</span>
+    </div>
+  </div>
+
+  <!-- Main Visualization Container -->
+  <div id="lstm-visualization"></div>
+
+  <!-- D3 from CDN -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- Our main script -->
+  <script src="script.js"></script>
+</body>
+</html>
