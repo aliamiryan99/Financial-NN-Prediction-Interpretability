@@ -26,6 +26,7 @@ class Data:
     name: str
     in_path: str
     out_path: str
+    evaluation_path: str
     exp_path: str
     interpret_path: str
     interpret_evaluation_path: str
@@ -66,9 +67,10 @@ def load_config(config_path: str = "Configs/config.yaml") -> Config:
         evaluation_visualization = EvaluationVisualization(**config_dict['evaluation_visualization'])
         data = Data(name=config_dict['data'], in_path=f"Data/{config_dict['data']}.csv",
                      out_path=f"Results/Forecasting/{config_dict['data']}/{config_dict['model']}.csv",
+                     evaluation_path=f"Results/evaluations.csv",
                      exp_path=f"Exprements/{config_dict['data']}/{config_dict['model']}",
                      interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/{config_dict['time_interpretability_class']}.csv",
-                     interpret_evaluation_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/evaluations.csv",
+                     interpret_evaluation_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/evaluations/{config_dict['time_interpretability_class']}.csv",
                      interpret_internal_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/internal.csv",
                      spec_interpret_path=f"Results/Interpretability/{config_dict['data']}/{config_dict['model']}/Spectral/{config_dict['spectral_interpretability_class']}.csv")
         return Config(

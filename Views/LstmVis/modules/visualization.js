@@ -1,160 +1,14 @@
-/*****************************************************************************
- * 1) CONFIG & GLOBALS
- *****************************************************************************/
-// Default number of columns (user can override via input)
-let NUM_COLUMNS = 3; 
-
-let RECT_WIDTH = 160;
-let RECT_HEIGHT = 80;
-const UNIT_SPACING_X = 360;
-const UNIT_SPACING_Y = 200;
-
-const container = d3.select('#lstm-visualization');
-const rect = container.node().getBoundingClientRect();
-const width = rect.width;
-const height = rect.height;
-
-const svg = container
-  .append('svg')
-  .attr('width', width)
-  .attr('height', height);
-
-const mainGroup = svg.append('g').attr('class', 'main-group');
-
-/** 
- * A text element for the "LSTM Layer 1" title. 
- * We'll reposition it dynamically after each render. 
- */
-const layerTitle = mainGroup.append('text')
-  .attr('class', 'layer-title')
-  .attr('text-anchor', 'middle')
-  .attr('font-size', 24)     // bigger
-  .attr('font-weight', 'bold')  // bold
-  .text('LSTM Layer 1');
+// visualization.js
+import {
+  generateRandomWeight,
+  generateRandomVector
+} from './randomUtils.js';
 
 /**
- * We'll reposition layerTitle in repositionLayerTitle()
+ * Renders the left sequence panel.
  */
-
-const zoom = d3.zoom()
-  .scaleExtent([0.5, 8])
-  .on('zoom', (event) => {
-    mainGroup.attr('transform', event.transform);
-  });
-
-svg.call(zoom);
-
-// If user clicks background, reset
-svg.on('click', (event) => {
-  if (event.target === svg.node()) {
-    centerAllUnits();
-  }
-});
-
-const tooltip = d3.select('body')
-  .append('div')
-  .attr('class', 'tooltip');
-
-const defs = svg.append('defs');
-
-// Markers
-defs.append('marker')
-  .attr('id', 'arrow')
-  .attr('markerWidth', 10)
-  .attr('markerHeight', 10)
-  .attr('refX', 6)
-  .attr('refY', 3)
-  .attr('orient', 'auto')
-  .append('path')
-  .attr('d', 'M0,0 L0,6 L6,3 z')
-  .attr('fill', '#000');
-
-defs.append('marker')
-  .attr('id', 'square')
-  .attr('markerWidth', 5)
-  .attr('markerHeight', 5)
-  .attr('refX', 2.5)
-  .attr('refY', 2.5)
-  .append('rect')
-  .attr('x', 0)
-  .attr('y', 0)
-  .attr('width', 5)
-  .attr('height', 5)
-  .attr('fill', '#000');
-
-// Data arrays
-let unitsData = [];       // from internal.csv
-let sequenceData = [];    // from InputSequence.csv (Open, High, Low, Close, Volume)
-const MAX_SAMPLES = 24;   // We'll display 24 steps in input panel
-let currentSampleIndex = 0;
-
-// For the hidden/cell states history
-let statesHistory = [];
-let stepCounter = 0; // each time we press play, we treat it as a "step"
-
-
-/*****************************************************************************
- * 2) LOAD DATA
- *****************************************************************************/
-
-// 2.1) Load input sequence
-d3.csv('Assets/InputSequence.csv').then(seq => {
-  // Expect columns: Time, Open, High, Low, Close, Volume, VolumeForecast
-  // We only take the first 24 rows and parse them
-  sequenceData = seq.slice(0, MAX_SAMPLES).map(d => {
-    return {
-      Open: +d.Open,
-      High: +d.High,
-      Low: +d.Low,
-      Close: +d.Close,
-      Volume: +d.Volume
-    };
-  });
-
-  renderSequencePanel();
-
-  // 2.2) Load units data (internal.csv)
-  d3.csv('Assets/internal.csv').then(units => {
-    const layer1Data = units.filter(d => +d.Layer === 1);
-    layer1Data.forEach(d => { d.MSE_Difference = +d.MSE_Difference; });
-
-    // Build unitsData
-    unitsData = layer1Data.map(row => {
-      return {
-        id: +row.Unit,
-        importance: row.MSE_Difference,
-
-        // We'll keep hidden and cell vectors as zero, for example
-        hiddenVector: Array(50).fill(0),
-        cellVector: Array(50).fill(0),
-
-        // Gating and outputs randomly
-        gates: {
-          forget: Math.random(),
-          input: Math.random(),
-          candidate: Math.random(),
-          output: Math.random()
-        },
-        hiddenOutputValue: (Math.random()*2 - 1).toFixed(3),
-        cellOutputValue: (Math.random()*2 - 1).toFixed(3)
-      };
-    });
-
-    // Now we can do an initial update
-    updateVisualization(10);
-  }).catch(err => {
-    console.error('Error loading internal.csv', err);
-  });
-
-}).catch(err => {
-  console.error('Error loading InputSequence.csv', err);
-});
-
-/*****************************************************************************
- * 3) SEQUENCE PANEL (LEFT)
- *****************************************************************************/
-function renderSequencePanel() {
-  const panel = d3.select('#sequence-panel');
+export function renderSequencePanel(panelSelector, sequenceData, currentSampleIndex) {
+  const panel = d3.select(panelSelector);
   panel.html('');
 
   panel.append('h4').text('Input Sequence (24 steps)');
@@ -174,11 +28,11 @@ function renderSequencePanel() {
   });
 }
 
-/*****************************************************************************
- * 4) STATES PANEL (RIGHT)
- *****************************************************************************/
-function renderStatesPanel() {
-  const panel = d3.select('#states-panel');
+/**
+ * Renders the right states panel (history of hidden/cell states).
+ */
+export function renderStatesPanel(panelSelector, statesHistory, container, tooltip) {
+  const panel = d3.select(panelSelector);
   panel.html('');
 
   panel.append('h4').text('Hidden/Cell States History');
@@ -188,10 +42,10 @@ function renderStatesPanel() {
   statesHistory.forEach((stateObj, i) => {
     const li = ul.append('li');
     if (i === statesHistory.length - 1) {
-      li.style('font-weight', 'bold')
-        .style('font-size', '14px');
+      li.style('font-weight', 'bold').style('font-size', '14px');
     }
 
+    // For showing vector tooltip
     function showVectorTooltip(event, arr, label) {
       const [mx, my] = d3.pointer(event, container.node());
       tooltip
@@ -201,10 +55,9 @@ function renderStatesPanel() {
         .style('top', (my + 15) + 'px');
     }
 
-    li.append('span')
-      .text(`Step ${stateObj.stepIndex}: `);
+    li.append('span').text(`Step ${stateObj.stepIndex}: `);
 
-    // HiddenState
+    // Hidden State link
     li.append('span')
       .text(`HiddenState${stateObj.stepIndex}`)
       .style('color', 'blue')
@@ -224,7 +77,7 @@ function renderStatesPanel() {
 
     li.append('span').text('  '); // small gap
 
-    // CellState
+    // Cell State link
     li.append('span')
       .text(`CellState${stateObj.stepIndex}`)
       .style('color', 'green')
@@ -244,10 +97,10 @@ function renderStatesPanel() {
   });
 }
 
-/*****************************************************************************
- * 5) LAYOUT & RENDERING
- *****************************************************************************/
-function getGridPosition(i) {
+/**
+ * Given a unit index and total columns, returns the (x,y) position in the grid.
+ */
+export function getGridPosition(i, NUM_COLUMNS, UNIT_SPACING_X, UNIT_SPACING_Y) {
   const col = i % NUM_COLUMNS;
   const row = Math.floor(i / NUM_COLUMNS);
   return {
@@ -256,7 +109,25 @@ function getGridPosition(i) {
   };
 }
 
-function renderUnits(data) {
+// Helpers for lines
+function generateLine(source, target) {
+  return `M ${source.x},${source.y} L ${target.x},${target.y}`;
+}
+
+function generateCurve(source, target) {
+  // A simple curve from source to target
+  return `
+    M ${source.x},${source.y}
+    C ${source.x},${source.y},
+      ${source.x},${target.y},
+      ${target.x},${target.y}
+  `;
+}
+
+/**
+ * Renders the LSTM units (rectangles + labels).
+ */
+export function renderUnits(mainGroup, data, d3TransitionDuration, RECT_WIDTH, RECT_HEIGHT, handleUnitClick) {
   const unitGroups = mainGroup.selectAll('.unit-group')
     .data(data, d => d.id);
 
@@ -290,13 +161,13 @@ function renderUnits(data) {
   const merged = unitGroupsEnter.merge(unitGroups);
 
   merged.select('rect')
-    .transition().duration(750)
+    .transition().duration(d3TransitionDuration)
     .attr('x', d => d.x - RECT_WIDTH/2)
     .attr('y', d => d.y - RECT_HEIGHT/2)
     .attr('opacity', 1);
 
   merged.select('text')
-    .transition().duration(750)
+    .transition().duration(d3TransitionDuration)
     .attr('x', d => (d.x - RECT_WIDTH/2) - 5)
     .attr('y', d => (d.y - RECT_HEIGHT/2) - 5)
     .tween('text', function(d) {
@@ -308,7 +179,15 @@ function renderUnits(data) {
     });
 }
 
-function renderConnections(data) {
+/**
+ * Renders the lines (“connections”) around each unit (input, cell, hidden, outputs).
+ */
+export function renderConnections(
+  mainGroup, data, sequenceData, currentSampleIndex,
+  container, tooltip,
+  RECT_WIDTH, RECT_HEIGHT,
+  d3TransitionDuration
+) {
   const currentInput = sequenceData[currentSampleIndex];
   const currentInputArray = [
     currentInput.Open,
@@ -319,7 +198,6 @@ function renderConnections(data) {
   ];
 
   const connections = [];
-
   data.forEach(unit => {
     const joinPoint = {
       x: unit.x - RECT_WIDTH / 2,
@@ -425,13 +303,15 @@ function renderConnections(data) {
     .attr('class', 'connection');
 
   // Start node circles for input/cell/hidden
-  pathEnter.filter(d => d.type === 'input' || d.type === 'hidden' || d.type === 'cell')
+  pathEnter
+    .filter(d => d.type === 'input' || d.type === 'hidden' || d.type === 'cell')
     .append('circle')
     .attr('class', 'start-node')
     .attr('r', 5);
 
   // Output labels
-  pathEnter.filter(d => d.type === 'hiddenOutput' || d.type === 'cellOutput')
+  pathEnter
+    .filter(d => d.type === 'hiddenOutput' || d.type === 'cellOutput')
     .append('text')
     .attr('class', 'output-label')
     .attr('text-anchor', 'start')
@@ -442,20 +322,23 @@ function renderConnections(data) {
 
   // Update path
   allGroups.select('path')
-    .transition().duration(750)
-    .attr('d', d => d.isCurve ? generateCurve(d.source, d.target) : generateLine(d.source, d.target))
+    .transition().duration(d3TransitionDuration)
+    .attr('d', d => d.isCurve
+      ? generateCurve(d.source, d.target)
+      : generateLine(d.source, d.target)
+    )
     .attr('marker-start', d => d.markerStart)
     .attr('marker-end', d => d.markerEnd);
 
   // Start-node circles
   allGroups.select('.start-node')
-    .transition().duration(750)
+    .transition().duration(d3TransitionDuration)
     .attr('cx', d => d.source.x)
     .attr('cy', d => d.source.y);
 
   // Output labels near end
   allGroups.select('.output-label')
-    .transition().duration(750)
+    .transition().duration(d3TransitionDuration)
     .attr('x', d => d.target.x + 5)
     .attr('y', d => d.target.y + 4);
 
@@ -486,44 +369,22 @@ function renderConnections(data) {
     });
 }
 
-/*****************************************************************************
- * 6) LINE HELPERS
- *****************************************************************************/
-function generateLine(source, target) {
-  return `M ${source.x},${source.y} L ${target.x},${target.y}`;
-}
-
-function generateCurve(source, target) {
-  const midX = (source.x + target.x) / 2;
-  const midY = (source.y + target.y) / 2;
-  return `
-    M ${source.x},${source.y}
-    C ${source.x},${source.y},
-      ${source.x},${target.y},
-      ${target.x},${target.y}
-  `;
-}
-
-/*****************************************************************************
- * 7) INTERNAL LSTM UNIT DETAILS
- *****************************************************************************/
 /**
- * Renders the internal LSTM unit diagram in a style similar to your reference image.
- * Replaces the old code that drew large rectangles/gates. 
+ * Renders internal LSTM gate details for a single unit.
+ * In the original code, each time you click a unit, we create these shapes.
  */
-function renderGateDetails(unitData) {
-  // Remove old internal-lstm shapes
+export function renderGateDetails(mainGroup, unitData, container, tooltip) {
+  // Remove old shapes
   mainGroup.selectAll('.internal-lstm-group').remove();
 
-  // Create a group for the internal diagram
+  // Create a group for internal diagram
   const internalGroup = mainGroup.append('g')
     .attr('class', 'internal-lstm-group');
 
-  // Center of this LSTM unit
   const cx = unitData.x;
   const cy = unitData.y;
 
-  // ====== 1) Four Gates (small orange rectangles) ======
+  // (1) Gates
   const gateWidth = 20, gateHeight = 12;
   const gates = [
     { name: 'Forget Gate',    x: cx - 60, y: cy + 18 },
@@ -546,7 +407,8 @@ function renderGateDetails(unitData) {
     .attr('stroke-width', 0.5)
     .on('mouseover', (event, d) => {
       const [mx, my] = d3.pointer(event, container.node());
-      const randWeight = (Math.random()*2 - 1).toFixed(3);
+      // Pull a random weight from randomUtils
+      const randWeight = generateRandomWeight(3);
       tooltip.style('visibility', 'visible')
         .html(`<b>${d.name}</b><br>Weight: ${randWeight}`)
         .style('left', (mx + 15) + 'px')
@@ -554,12 +416,15 @@ function renderGateDetails(unitData) {
     })
     .on('mousemove', (event) => {
       const [mx, my] = d3.pointer(event, container.node());
-      tooltip.style('left', (mx + 15) + 'px')
+      tooltip
+        .style('left', (mx + 15) + 'px')
         .style('top', (my + 15) + 'px');
     })
-    .on('mouseout', () => { tooltip.style('visibility', 'hidden'); });
+    .on('mouseout', () => {
+      tooltip.style('visibility', 'hidden');
+    });
 
-  // *** NEW: Add symbol labels on gates ***
+  // Labels on gates
   internalGroup.selectAll('.lstm-gate-label')
     .data(gates)
     .enter()
@@ -571,13 +436,13 @@ function renderGateDetails(unitData) {
     .attr('font-size', 8)
     .text(d => d.name === 'Cell Gate' ? 'tanh' : 'σ');
 
-  // ====== 2) Five Elementwise Ops (small green circles) ======
+  // (2) Elementwise Ops
   const opRadius = 7;
   const ops = [
     { name: 'Forget Operator',   x: cx - 60, y: cy - 20 },
     { name: 'Input Operator',    x: cx     , y: cy - 2  },
-    { name: 'Add => c_t',         x: cx     , y: cy - 20 },
-    { name: 'Tanh(c_t)',          x: cx + 60, y: cy - 2  },
+    { name: 'Add => c_t',        x: cx     , y: cy - 20 },
+    { name: 'Tanh(c_t)',         x: cx + 60, y: cy - 2  },
     { name: 'Output Operator',   x: cx + 60, y: cy + 30 }
   ];
 
@@ -594,7 +459,8 @@ function renderGateDetails(unitData) {
     .attr('stroke-width', 0.5)
     .on('mouseover', (event, d) => {
       const [mx, my] = d3.pointer(event, container.node());
-      const randomVec = Array.from({length: 5}, () => (Math.random()*2 -1).toFixed(2));
+      // Example: random vector of length 5
+      const randomVec = generateRandomVector(5, 2);
       tooltip.style('visibility', 'visible')
         .html(`<b>${d.name}</b><br>Vec: ${JSON.stringify(randomVec)}`)
         .style('left', (mx + 15) + 'px')
@@ -605,9 +471,11 @@ function renderGateDetails(unitData) {
       tooltip.style('left', (mx + 15) + 'px')
         .style('top', (my + 15) + 'px');
     })
-    .on('mouseout', () => { tooltip.style('visibility', 'hidden'); });
+    .on('mouseout', () => {
+      tooltip.style('visibility', 'hidden');
+    });
 
-  // *** NEW: Add symbol labels on operators ***
+  // Labels on ops
   internalGroup.selectAll('.lstm-op-label')
     .data(ops)
     .enter()
@@ -616,18 +484,15 @@ function renderGateDetails(unitData) {
     .attr('x', d => d.x)
     .attr('y', d => d.y + 3)
     .attr('text-anchor', 'middle')
-    .attr('font-size', (d) => {
-      if(d.name === 'Tanh(c_t)') return 6;
-      else return 8;
-    })
-    .text((d) => {
-      if(d.name === 'Add => c_t') return '+';
-      else if(d.name === 'Tanh(c_t)') return 'tanh';
-      else return '×';
+    .attr('font-size', d => (d.name === 'Tanh(c_t)' ? 6 : 8))
+    .text(d => {
+      if (d.name === 'Add => c_t') return '+';
+      if (d.name === 'Tanh(c_t)') return 'tanh';
+      return '×';
     });
 
-  // ====== 3) Connection Lines (approx Colah-style) ======
-  // --- Modified: Change the input gate => multiply(input) connection to be curved.
+  // (3) Connection lines
+  // Mark some as curve, some as straight
   const lines = [
     { x1: cx - 80,  y1: cy - 20, x2: ops[0].x - opRadius, y2: ops[0].y, label: 'c_{t-1}' },
     { x1: gates[0].x, y1: gates[0].y - gateHeight/2, x2: ops[0].x, y2: ops[0].y + opRadius, label: 'f_t' },
@@ -647,22 +512,23 @@ function renderGateDetails(unitData) {
     { x1: gates[2].x, y1: gates[3].y, x2: gates[2].x, y2: gates[2].y + gateHeight/2, label: '[h_{t-1}, x_t]' },
   ];
 
-  // --- Split the connection rendering into curved and straight lines:
+
   const connEnter = internalGroup.selectAll('.internal-conn')
     .data(lines)
     .enter();
 
-  // For curved connections:
   connEnter.filter(d => d.curve)
     .append('path')
     .attr('class', 'internal-conn')
-    .attr('d', d => generateCurve({x: d.x1, y: d.y1}, {x: d.x2, y: d.y2}))
+    .attr('d', d => {
+      return generateCurve({ x: d.x1, y: d.y1 }, { x: d.x2, y: d.y2 });
+    })
     .attr('stroke', '#333')
     .attr('stroke-width', 2)
     .attr('fill', 'none')
     .on('mouseover', (event, d) => {
       const [mx, my] = d3.pointer(event, container.node());
-      const randW = (Math.random()*2 -1).toFixed(2);
+      const randW = generateRandomWeight(2);
       let html = d.label ? `<b>${d.label}</b><br>` : '';
       html += `Connection Weight: ${randW}`;
       tooltip.style('visibility', 'visible')
@@ -672,12 +538,12 @@ function renderGateDetails(unitData) {
     })
     .on('mousemove', (event) => {
       const [mx, my] = d3.pointer(event, container.node());
-      tooltip.style('left', (mx + 10) + 'px')
+      tooltip
+        .style('left', (mx + 10) + 'px')
         .style('top', (my + 10) + 'px');
     })
     .on('mouseout', () => { tooltip.style('visibility', 'hidden'); });
 
-  // For straight connections:
   connEnter.filter(d => !d.curve)
     .append('line')
     .attr('class', 'internal-conn')
@@ -689,7 +555,7 @@ function renderGateDetails(unitData) {
     .attr('stroke-width', 2)
     .on('mouseover', (event, d) => {
       const [mx, my] = d3.pointer(event, container.node());
-      const randW = (Math.random()*2 -1).toFixed(2);
+      const randW = generateRandomWeight(2);
       let html = d.label ? `<b>${d.label}</b><br>` : '';
       html += `Connection Weight: ${randW}`;
       tooltip.style('visibility', 'visible')
@@ -699,27 +565,17 @@ function renderGateDetails(unitData) {
     })
     .on('mousemove', (event) => {
       const [mx, my] = d3.pointer(event, container.node());
-      tooltip.style('left', (mx + 10) + 'px')
+      tooltip
+        .style('left', (mx + 10) + 'px')
         .style('top', (my + 10) + 'px');
     })
     .on('mouseout', () => { tooltip.style('visibility', 'hidden'); });
 }
 
-
-/*****************************************************************************
- * 8) ZOOM & SELECT
- *****************************************************************************/
-function handleUnitClick(event, d) {
-  event.stopPropagation();
-  zoomToUnit(d);
-  d3.select(this).select('rect').classed('zoomed-in', true);
-  renderGateDetails(d);
-}
-
 /**
- * Zoom in on the clicked LSTM unit.
+ * Zoom to a specific unit.
  */
-function zoomToUnit(unitData) {
+export function zoomToUnit(svg, zoom, width, height, unitData) {
   const scale = 3;
   svg.transition()
     .duration(750)
@@ -732,10 +588,10 @@ function zoomToUnit(unitData) {
     );
 }
 
-/*****************************************************************************
- * 9) CENTER & REPOSITION TITLE
- *****************************************************************************/
-function centerAllUnits() {
+/**
+ * Center (zoom out to fit) all units in view.
+ */
+export function centerAllUnits(svg, mainGroup, zoom, width, height, repositionLayerTitle) {
   const bounds = mainGroup.node().getBBox();
   if (!bounds.width || !bounds.height) return;
 
@@ -750,7 +606,6 @@ function centerAllUnits() {
   const ty = (height - bounds.height * scale) / 2 - bounds.y * scale;
 
   mainGroup.selectAll('.lstm-unit').classed('zoomed-in', false);
-  // Remove old internal-lstm shapes
   mainGroup.selectAll('.internal-lstm-group').remove();
 
   svg.transition()
@@ -760,103 +615,19 @@ function centerAllUnits() {
       d3.zoomIdentity.translate(tx, ty).scale(scale)
     )
     .on('end', () => {
-      repositionLayerTitle();
+      repositionLayerTitle(mainGroup);
     });
 }
 
 /**
  * Reposition "LSTM Layer 1" text above the bounding box of all units
  */
-function repositionLayerTitle() {
+export function repositionLayerTitle(mainGroup) {
   const bounds = mainGroup.node().getBBox();
   const titleX = bounds.x + bounds.width / 2;
-  layerTitle
-    .transition()             // Start a transition
-    .duration(500)            // Transition duration in milliseconds
-    .attr('x', titleX);       // Update the x attribute over the duration
+  // Animate x position
+  mainGroup.select('.layer-title')
+    .transition()
+    .duration(500)
+    .attr('x', titleX);
 }
-
-function resetZoom() {
-  centerAllUnits();
-}
-
-/*****************************************************************************
- * 10) UPDATE VISUALIZATION
- *****************************************************************************/
-function updateVisualization(numUnits) {
-  // Sort by importance
-  const topUnits = unitsData
-    .slice()
-    .sort((a,b) => d3.descending(a.importance, b.importance))
-    .slice(0, numUnits);
-
-  // Compute layout
-  topUnits.forEach((u, i) => {
-    const {x,y} = getGridPosition(i);
-    u.x = x;
-    u.y = y;
-  });
-
-  mainGroup.selectAll('.lstm-unit').classed('zoomed-in', false);
-  // Remove old internal-lstm shapes
-  mainGroup.selectAll('.internal-lstm-group').remove();
-
-  renderUnits(topUnits);
-  renderConnections(topUnits);
-
-  // After we render, we center + reposition title
-  setTimeout(() => {
-    centerAllUnits();
-  }, 800);
-}
-
-/*****************************************************************************
- * 11) UI
- *****************************************************************************/
-// #Units slider
-const unitsCountInput = document.getElementById('units-count');
-const unitsLabel = document.getElementById('units-label');
-unitsCountInput.addEventListener('input', function() {
-  const val = +this.value;
-  unitsLabel.textContent = val;
-  updateVisualization(val);
-});
-unitsLabel.textContent = unitsCountInput.value;
-
-// #Columns number input
-const columnsInput = document.getElementById('columns-count');
-columnsInput.addEventListener('change', function() {
-  const colVal = +this.value;
-  if (colVal >= 1 && colVal <= 6) {
-    NUM_COLUMNS = colVal;
-    updateVisualization(+unitsCountInput.value);
-  }
-});
-
-// Reset Zoom
-document.getElementById('reset-zoom-btn')
-  .addEventListener('click', resetZoom);
-
-// "Play Next Sample"
-document.getElementById('play-sample-btn')
-  .addEventListener('click', () => {
-    currentSampleIndex = (currentSampleIndex + 1) % MAX_SAMPLES;
-    renderSequencePanel();
-
-    // Generate random hidden & cell states for demonstration
-    const randomHidden = Array.from({length: 50}, () => +(Math.random().toFixed(3)));
-    const randomCell = Array.from({length: 50}, () => +(Math.random().toFixed(3)));
-
-    stepCounter++;
-    statesHistory.push({
-      stepIndex: stepCounter,
-      hiddenState: randomHidden,
-      cellState: randomCell
-    });
-
-    // Re-render states panel
-    renderStatesPanel();
-
-    // Re-run update so the input connection uses the new sample
-    updateVisualization(+unitsCountInput.value);
-  });

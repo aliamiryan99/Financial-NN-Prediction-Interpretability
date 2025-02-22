@@ -25,6 +25,14 @@ class Evaluations:
         # Calculate metrics
         self.metrics_calculator = MetricsCalculator(self.data_loader.csv_files)
 
+        # Save evaluation metrics to CSV file in the Results folder
+        results_csv_path = self.config_loader.evaluation_path
+
+        # Ensure the results folder exists
+        os.makedirs(self.config_loader.results_folder, exist_ok=True)
+        self.metrics_calculator.loss_df.to_csv(results_csv_path, index=False)
+        print(f"Saved evaluation metrics to {results_csv_path}")
+
         # Create figures
         self.figure_creator = FigureCreator(
             self.metrics_calculator.loss_df,
@@ -38,6 +46,7 @@ class Evaluations:
             self.config_loader.ncols
         )
 
+
 class ConfigLoader:
     """Load configuration settings."""
     def __init__(self, config: Config):
@@ -46,6 +55,7 @@ class ConfigLoader:
 
     def load_config(self):
         self.results_folder = os.path.dirname(self.config.data.out_path)
+        self.evaluation_path = self.config.data.evaluation_path
         self.metrics = ['MSE', 'RMSE', 'MAE', 'R-squared', 'ASE', 'MBD']
         self.ncols = self.config.evaluation_visualization.n_cols
         symbol = self.config.data.name.split('/')[-1]

@@ -1,149 +1,233 @@
 /* Basic reset */
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-  }
-  
-  /* BODY */
-  body {
-    font-family: Arial, sans-serif;
-    background: #f0f0f0;
-  }
-  
-  /* HEADER BAR */
-  #header-bar {
-    display: flex;
-    align-items: flex-start; 
-    background-color: navy;
-    color: white;
-    padding: 10px;
-  }
-  
-  #header-left {
-    flex: 0;
-    margin-right: 20px;
-  }
-  .project-name {
-    font-weight: bold;
-    font-size: 14px;
-    margin-bottom: 4px;
-  }
-  .subtitle {
-    font-weight: bold;
-    font-size: 13px;
-  }
-  
-  /* Center truly in the middle */
-  #header-center {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    /* vertical alignment (if needed) */
-    align-items: flex-start;
-  }
-  
-  .property {
-    display: flex;
-    flex-direction: column;
-    font-size: 12px;
-    align-items: center;
-  }
-  .label {
-    margin-bottom: 3px;
-  }
-  .value {
-    font-weight: bold;
-  }
-  
-  #header-right {
-    flex: 0;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-  }
-  
-  /* TOOLBAR */
-  #toolbar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: whitesmoke;
-    padding: 10px;
-    border-bottom: 1px solid #ccc;
-  }
-  
-  #toolbar-center {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  
-  /* MAIN VISUALIZATION CONTAINER */
-  #lstm-visualization {
-    width: 100%;
-    background: #ffffff;
-    border: 1px solid #ccc;
-    position: relative;
-    overflow: hidden;
-    height: calc(100vh - 150px); 
-    /* Adjust if needed for your header + toolbar size */
-  }
-  
-  /* RESET ZOOM BUTTON */
-  .reset-btn {
-    background-color: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 5px 8px;
-    cursor: pointer;
-    outline: none;
-  }
-  .reset-btn:hover {
-    background-color: #f1f1f1;
-  }
-  
-  /* LSTM UNIT (horizontal rectangle) */
-  .lstm-unit {
-    cursor: pointer;
-    stroke: #555;
-    stroke-width: 1px;
-    fill: #69b3a2;
-    transition: fill 0.5s;
-  }
-  .lstm-unit.zoomed-in {
-    fill: rgba(105,179,162, 0.2);
-  }
-  
-  /* Connection lines */
-  .connection {
-    fill: none;
-    stroke: gray;
-    stroke-width: 2;
-    cursor: pointer;
-  }
-  
-  /* Tooltip styling */
-  .tooltip {
-    position: absolute;
-    visibility: hidden;
-    background: rgba(255, 255, 255, 0.95);
-    border: 1px solid #999;
-    padding: 6px;
-    font-size: 12px;
-    pointer-events: none;
-    border-radius: 4px;
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    max-width: 250px;
-    word-wrap: break-word;
-  }
-  
-  /* Gate circles inside the LSTM unit when zoomed in */
-  .gate-circle {
-    fill: #ff7f50;
-    stroke: #333;
-    stroke-width: 1px;
-    opacity: 0;
-  }
-  
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* BODY */
+body {
+  font-family: Arial, sans-serif;
+  background: #f0f0f0;
+}
+
+/* HEADER BAR */
+#header-bar {
+  display: flex;
+  align-items: flex-start;
+  background-color: navy;
+  color: white;
+  padding: 10px;
+}
+
+#header-left {
+  flex: 1;
+  margin-right: 20px;
+}
+.project-name {
+  font-weight: normal;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+.subtitle {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Center truly in the middle */
+#header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.property {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  align-items: center;
+}
+.label {
+  margin-bottom: 4px;
+}
+.value {
+  font-weight: bold;
+  font-size: 16px
+}
+
+#header-right {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: end;
+}
+
+/* TOOLBAR */
+#toolbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: whitesmoke;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+
+#toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* SEQUENCE PANEL (left side) */
+#sequence-panel {
+  float: left;
+  width: 20vw; /* adjust as needed */
+  height: calc(100vh - 150px);
+  overflow: auto;
+  border-right: 1px solid #ccc;
+  padding: 10px;
+  background: #fafafa;
+}
+
+#sequence-panel h4 {
+  margin-bottom: 10px;
+}
+
+#sequence-panel ul {
+  list-style-type: disc;
+  margin-left: 20px;
+}
+
+#sequence-panel li {
+  margin-bottom: 8px;
+}
+
+/* STATES PANEL (right side) */
+#states-panel {
+  float: right;
+  width: 20vw; /* adjust as needed */
+  height: calc(100vh - 150px);
+  overflow: auto;
+  border-left: 1px solid #ccc;
+  padding: 10px;
+  background: #fafafa;
+}
+
+#states-panel h4 {
+  margin-bottom: 10px;
+}
+
+#states-panel ul {
+  list-style-type: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+#states-panel li {
+  margin-bottom: 8px;
+}
+
+/* MAIN VISUALIZATION CONTAINER */
+#lstm-visualization {
+  margin-left: 20vw;
+  margin-right: 20vw; /* new margin for states panel */
+  background: #ffffff;
+  border: 1px solid #ccc;
+  position: relative;
+  overflow: hidden;
+  height: calc(100vh - 150px);
+}
+
+/* RESET ZOOM BUTTON */
+.reset-btn {
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px 8px;
+  cursor: pointer;
+  outline: none;
+}
+.reset-btn:hover {
+  background-color: #f1f1f1;
+}
+
+/* LSTM UNIT */
+.lstm-unit {
+  cursor: pointer;
+  stroke: #555;
+  stroke-width: 1px;
+  fill: #69b3a2;
+  transition: fill 0.5s;
+}
+.lstm-unit.zoomed-in {
+  fill: rgba(105,179,162, 0.2);
+}
+
+/* Connection lines */
+.connection {
+  fill: none;
+  stroke: gray;
+  stroke-width: 2;
+  cursor: pointer;
+}
+
+/* Start Node Circle (for tooltips) */
+.start-node {
+  cursor: pointer;
+  fill: #999;
+  stroke: #666;
+  stroke-width: 1px;
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: absolute;
+  visibility: hidden;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #999;
+  padding: 6px;
+  font-size: 12px;
+  pointer-events: none; /* so mouse events pass through the tooltip */
+  border-radius: 4px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+  max-width: 250px;
+  word-wrap: break-word;
+}
+
+/* Gate circles in old code are replaced with new shapes in script.js */
+.gate-circle {
+  fill: #ff7f50;
+  stroke: #333;
+  stroke-width: 1px;
+  opacity: 0;
+}
+
+/* UNIT LABEL OUTSIDE THE RECTANGLE */
+.unit-label {
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: bold;
+  fill: #333;
+}
+
+/* Output value labels near the lines */
+.output-label {
+  font-size: 10px;
+  fill: #333;
+  pointer-events: none;
+}
+
+.lstm-gate-label,
+.lstm-op-label {
+  pointer-events: none;
+}
+
+/* Title text for the layer at the top */
+.layer-title {
+  font-weight: bold;
+  fill: #444;
+}
+

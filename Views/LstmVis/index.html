@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>LSTM Visualization</title>
+  <title>IMO: Inner Model Occlusion Method for LSTM Visualization</title>
+  <link rel="icon" type="image/png" href="Assets/Logo.png">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -21,36 +22,57 @@
       </div>
       <div class="property">
         <span class="label">Instance Time:</span>
-        <div class="value">2024-09-11 12:00:00</div>
+        <div class="value">2025-01-01 12:00:00</div>
       </div>
       <div class="property">
         <span class="label">Interpretability Method:</span>
-        <div class="value">Occlusion</div>
+        <div class="value">Inner Model Occlusion</div>
       </div>
     </div>
     <div id="header-right">
       <!-- Link to the paper (placeholder) -->
       <a href="https://your-paper-link.com" target="_blank">
         <img src="https://img.icons8.com/ios-filled/24/ffffff/document--v1.png"
-             alt="Paper" title="View Paper" />
+             alt="Paper" title="View Paper" height="40px"/>
       </a>
       <!-- A placeholder logo -->
-      <img src="https://img.icons8.com/ios-filled/24/ffffff/bolt.png"
-           alt="Logo" title="Logo" />
+      <img src="Assets/Logo.png"
+           alt="Logo" title="Logo" height="40px"/>
     </div>
   </header>
 
   <!-- Toolbar -->
   <div id="toolbar">
     <div id="toolbar-center">
-      <button id="reset-zoom-btn" class="reset-btn" title="Reset Zoom">
-        <img src="https://img.icons8.com/ios-filled/20/000000/cursor.png" alt="Reset" />
-      </button>
-
-      <label for="units-count">Number of Units:</label>
+      <!-- Number of Units -->
+      <label for="units-count">#Units:</label>
       <input type="range" id="units-count" name="units-count" min="1" max="50" value="10" />
       <span id="units-label">10</span>
+
+      <!-- Number of Columns -->
+      <label for="columns-count">#Columns:</label>
+      <input type="number" id="columns-count" name="columns-count" min="1" max="6" value="3" style="width: 50px;" />
+
+      <!-- Reset Zoom -->
+      <button id="reset-zoom-btn" class="reset-btn" title="Reset Zoom">
+        <img src="https://img.icons8.com/ios-filled/20/000000/zoom.png" alt="Reset" />
+      </button>
+
+      <!-- "Play Next Sample" button -->
+      <button id="play-sample-btn" class="reset-btn" title="Play Next Sample">
+        <img src="https://img.icons8.com/ios-filled/20/000000/play.png" alt="Play" />
+      </button>
     </div>
+  </div>
+
+  <!-- Side Panel for Input Sequence -->
+  <div id="sequence-panel">
+    <!-- Will be populated by script -->
+  </div>
+
+  <!-- Side Panel for States History (right) -->
+  <div id="states-panel">
+    <!-- Will be populated by script -->
   </div>
 
   <!-- Main Visualization Container -->
@@ -59,6 +81,6 @@
   <!-- D3 from CDN -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <!-- Our main script -->
-  <script src="script.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>
