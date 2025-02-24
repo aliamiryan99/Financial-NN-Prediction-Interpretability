@@ -81,6 +81,14 @@ body {
   gap: 12px;
 }
 
+#play-sample-btn:disabled {
+  background-color: #ccc; /* Light gray background */
+  color: #666; /* Darker gray text */
+  cursor: not-allowed; /* Show a not-allowed cursor */
+  opacity: 0.6; /* Reduce opacity */
+  border: 1px solid #aaa; /* Subtle border */
+}
+
 /* SEQUENCE PANEL (left side) */
 #sequence-panel {
   float: left;

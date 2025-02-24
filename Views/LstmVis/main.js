@@ -1,5 +1,5 @@
 // main.js
-import { loadSequenceData, loadUnitsData } from './modules/dataLoader.js';
+import { loadSequenceData, loadLSTMCoreData, roundArray } from './modules/dataLoader.js';
 import {
   renderSequencePanel,
   renderStatesPanel,
@@ -12,6 +12,7 @@ import {
   repositionLayerTitle
 } from './modules/visualization.js';
 import { generateRandomVector } from './modules/randomUtils.js';
+import { computeAllGateOutputs, updateUnitsGateValues, computeNextStates } from './modules/utils.js'; 
 
 // -------------- 1) CONFIG & GLOBALS ---------------
 export let NUM_COLUMNS = 3;
@@ -19,14 +20,20 @@ const RECT_WIDTH = 160;
 const RECT_HEIGHT = 80;
 const UNIT_SPACING_X = 360;
 const UNIT_SPACING_Y = 200;
+const D3TRANSITION_DURATION = 750;
+const DECIMAL_PRECISION = 4;
 
 const MAX_SAMPLES = 24;
 let currentSampleIndex = 0;
 let stepCounter = 0; // each press of "Play Next Sample" increments step
 
 let sequenceData = [];
+let sequenceList = [];
 let unitsData = [];
 let statesHistory = [];
+let h_t = null, h_tminus1 = null;
+let c_t = null, c_tminus1 = null;
+let layer1Weights = null; // The object {kernel, recurrent, bias}
 
 // Container
 const container = d3.select('#lstm-visualization');
@@ -96,21 +103,35 @@ defs.append('marker')
   .attr('height', 5)
   .attr('fill', '#000');
 
-// -------------- 2) LOAD DATA ---------------
+// -------------- 2) LOAD JSON DATA ---------------
 Promise.all([
   loadSequenceData(MAX_SAMPLES),
-  loadUnitsData()
-]).then(([seqData, uData]) => {
-  sequenceData = seqData;
-  unitsData = uData;
+  loadLSTMCoreData()
+]).then(([seq, core]) => {
+  sequenceData = seq;
+  sequenceList = seq.map(item => Object.values(item));
+  unitsData = core.unitsLayer1;
+  layer1Weights = core.layer1Weights;
+  const lenUnits = layer1Weights.kernel.length/4;
+  h_tminus1 = new Array(lenUnits).fill(0);
+  h_t = new Array(lenUnits).fill(0);
+  c_tminus1 = new Array(lenUnits).fill(0);
+  c_t = new Array(lenUnits).fill(0);
 
-  // Initial render of sequence panel
+  const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layer1Weights);
+  updateUnitsGateValues(unitsData, gatesActivations);
+  ({ c_t, h_t } = computeNextStates(c_tminus1, gatesActivations));
+
+  // Render initial left panel
   renderSequencePanel('#sequence-panel', sequenceData, currentSampleIndex);
 
-  // Render initial top-n units
+  // Re-render states panel on the right
+  renderStatesPanel('#states-panel', statesHistory, container, tooltip, h_t, c_t);
+
+  // Display top-10 units
   updateVisualization(10);
 }).catch(err => {
-  console.error('Error loading CSV data', err);
+  console.error('Error loading JSON data', err);
 });
 
 // -------------- 3) VISUALIZATION UPDATE ---------------
@@ -133,12 +154,13 @@ function updateVisualization(numUnits) {
   mainGroup.selectAll('.internal-lstm-group').remove();
 
   // Render the units and connections
-  renderUnits(mainGroup, topUnits, 750, RECT_WIDTH, RECT_HEIGHT, handleUnitClick);
+  renderUnits(mainGroup, topUnits, D3TRANSITION_DURATION, RECT_WIDTH, RECT_HEIGHT, handleUnitClick);
   renderConnections(
-    mainGroup, topUnits, sequenceData, currentSampleIndex,
+    mainGroup, topUnits, sequenceList[currentSampleIndex],
     container, tooltip,
     RECT_WIDTH, RECT_HEIGHT,
-    750
+    D3TRANSITION_DURATION,
+    c_tminus1, c_t, h_tminus1, h_t
   );
 
   // After rendering, center and re-title
@@ -157,7 +179,7 @@ function handleUnitClick(event, d) {
   d3.select(this).select('rect').classed('zoomed-in', true);
 
   // Render internal gate details
-  renderGateDetails(mainGroup, d, container, tooltip);
+  renderGateDetails(mainGroup, d, container, tooltip, layer1Weights, sequenceList[currentSampleIndex], h_tminus1, h_t, c_tminus1, c_t);
 }
 
 // -------------- 5) UI ---------------
@@ -188,25 +210,37 @@ document.getElementById('reset-zoom-btn').addEventListener('click', () => {
 
 // Play Next Sample
 document.getElementById('play-sample-btn').addEventListener('click', () => {
-  currentSampleIndex = (currentSampleIndex + 1) % MAX_SAMPLES;
+  currentSampleIndex = (currentSampleIndex + 1);
 
   // Re-render sequence panel to highlight new current
   renderSequencePanel('#sequence-panel', sequenceData, currentSampleIndex);
 
-  // Generate random hidden & cell states for demonstration
-  const randomHidden = generateRandomVector(50, 3);
-  const randomCell   = generateRandomVector(50, 3);
-
+  // Store the hidden state and cell state then uppdate them
   stepCounter++;
   statesHistory.push({
     stepIndex: stepCounter,
-    hiddenState: randomHidden,
-    cellState: randomCell
+    hiddenState: roundArray(h_t, DECIMAL_PRECISION),
+    cellState: roundArray(c_t, DECIMAL_PRECISION)
   });
 
+  // Update states
+  h_tminus1 = h_t;
+  c_tminus1 = c_t;
+
+  const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layer1Weights);
+  updateUnitsGateValues(unitsData, gatesActivations);
+  ({ c_t, h_t } = computeNextStates(c_tminus1, gatesActivations));
+
   // Re-render states panel on the right
-  renderStatesPanel('#states-panel', statesHistory, container, tooltip);
+  renderStatesPanel('#states-panel', statesHistory, container, tooltip, h_t, c_t);
 
   // Rerun update so the input connections use new sample
   updateVisualization(+unitsCountInput.value);
+
+  if (currentSampleIndex >= MAX_SAMPLES - 1) {
+    // Optionally, process the final sample update here if needed.
+    // Then disable the play button to prevent further clicks.
+    document.getElementById('play-sample-btn').disabled = true;
+    return;
+  }
 });

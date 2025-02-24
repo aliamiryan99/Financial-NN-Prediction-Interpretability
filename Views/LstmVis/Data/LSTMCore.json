@@ -1,88 +1,96 @@
 {
     "UnitImportanceScores": {
         "1": [
-            {
-                "Unit": 26,
-                "MSE_Difference": 0.050910022
-            },
-            {
-                "Unit": 28,
-                "MSE_Difference": 0.025295636
-            },
-            {
-                "Unit": 27,
-                "MSE_Difference": 0.014987455
-            },
-            {
-                "Unit": 11,
-                "MSE_Difference": 0.011633307
-            },
-            {
-                "Unit": 12,
-                "MSE_Difference": 0.0072940825
-            },
-            {
-                "Unit": 35,
-                "MSE_Difference": 0.006736119
-            },
-            {
-                "Unit": 19,
-                "MSE_Difference": 0.006242032
-            },
-            {
-                "Unit": 14,
-                "MSE_Difference": 0.005494963
-            },
-            {
-                "Unit": 41,
-                "MSE_Difference": 0.0054659364
-            },
-            {
-                "Unit": 47,
-                "MSE_Difference": 0.0040457034
-            }
+            {"Unit": 26, "MSE_Difference": 0.050910022},
+            {"Unit": 28, "MSE_Difference": 0.025295636},
+            {"Unit": 27, "MSE_Difference": 0.014987455},
+            {"Unit": 11, "MSE_Difference": 0.011633307},
+            {"Unit": 12, "MSE_Difference": 0.0072940825},
+            {"Unit": 35, "MSE_Difference": 0.006736119},
+            {"Unit": 19, "MSE_Difference": 0.006242032},
+            {"Unit": 14, "MSE_Difference": 0.005494963},
+            {"Unit": 41, "MSE_Difference": 0.0054659364},
+            {"Unit": 47, "MSE_Difference": 0.0040457034},
+            {"Unit": 37, "MSE_Difference": 0.0033498805},
+            {"Unit": 21, "MSE_Difference": 0.002801937},
+            {"Unit": 7, "MSE_Difference": 0.0026617837},
+            {"Unit": 22, "MSE_Difference": 0.0022087411},
+            {"Unit": 50, "MSE_Difference": 0.0021470482},
+            {"Unit": 39, "MSE_Difference": 0.0020823197},
+            {"Unit": 32, "MSE_Difference": 0.0017221102},
+            {"Unit": 30, "MSE_Difference": 0.0016060602},
+            {"Unit": 23, "MSE_Difference": 0.0014211386},
+            {"Unit": 38, "MSE_Difference": 0.001351197},
+            {"Unit": 36, "MSE_Difference": 0.0013225956},
+            {"Unit": 13, "MSE_Difference": 0.0010015952},
+            {"Unit": 49, "MSE_Difference": 0.00083981483},
+            {"Unit": 6, "MSE_Difference": 0.0006668265},
+            {"Unit": 42, "MSE_Difference": 0.00063761923},
+            {"Unit": 5, "MSE_Difference": 0.00063302607},
+            {"Unit": 1, "MSE_Difference": 0.0006216965},
+            {"Unit": 29, "MSE_Difference": 0.000619568},
+            {"Unit": 33, "MSE_Difference": 0.00045596343},
+            {"Unit": 9, "MSE_Difference": 0.00044398342},
+            {"Unit": 10, "MSE_Difference": 0.0004200874},
+            {"Unit": 46, "MSE_Difference": 0.00041860217},
+            {"Unit": 25, "MSE_Difference": 0.00041550706},
+            {"Unit": 31, "MSE_Difference": 0.00035894042},
+            {"Unit": 44, "MSE_Difference": 0.00034729333},
+            {"Unit": 20, "MSE_Difference": 0.00033221135},
+            {"Unit": 16, "MSE_Difference": 0.00029845032},
+            {"Unit": 48, "MSE_Difference": 0.00025162112},
+            {"Unit": 2, "MSE_Difference": 0.00024680764},
+            {"Unit": 40, "MSE_Difference": 0.00016565328},
+            {"Unit": 18, "MSE_Difference": 0.00013815051},
+            {"Unit": 24, "MSE_Difference": 0.000127064},
+            {"Unit": 45, "MSE_Difference": 0.00012238845},
+            {"Unit": 17, "MSE_Difference": 8.563666e-05},
+            {"Unit": 43, "MSE_Difference": 7.70154e-05},
+            {"Unit": 3, "MSE_Difference": 7.68929e-05},
+            {"Unit": 4, "MSE_Difference": 7.2736955e-05},
+            {"Unit": 34, "MSE_Difference": 6.4668326e-05},
+            {"Unit": 15, "MSE_Difference": 4.9487742e-05},
+            {"Unit": 8, "MSE_Difference": 2.9679168e-05}
         ],
         "2": [
-            {
-                "Unit": 41,
-                "MSE_Difference": 0.021544864
-            },
-            {
-                "Unit": 32,
-                "MSE_Difference": 0.014875078
-            },
-            {
-                "Unit": 30,
-                "MSE_Difference": 0.013660555
-            },
-            {
-                "Unit": 18,
-                "MSE_Difference": 0.012511386
-            },
-            {
-                "Unit": 31,
-                "MSE_Difference": 0.011922993
-            },
-            {
-                "Unit": 42,
-                "MSE_Difference": 0.0081384815
-            },
-            {
-                "Unit": 27,
-                "MSE_Difference": 0.0075440123
-            },
-            {
-                "Unit": 34,
-                "MSE_Difference": 0.0058289277
-            },
-            {
-                "Unit": 37,
-                "MSE_Difference": 0.005441033
-            },
-            {
-                "Unit": 48,
-                "MSE_Difference": 0.0053311386
-            }
+            {"Unit": 41, "MSE_Difference": 0.021544864},
+            {"Unit": 32, "MSE_Difference": 0.014875078},
+            {"Unit": 30, "MSE_Difference": 0.013660555},
+            {"Unit": 18, "MSE_Difference": 0.012511386},
+            {"Unit": 31, "MSE_Difference": 0.011922993},
+            {"Unit": 42, "MSE_Difference": 0.0081384815},
+            {"Unit": 27, "MSE_Difference": 0.0075440123},
+            {"Unit": 34, "MSE_Difference": 0.0058289277},
+            {"Unit": 37, "MSE_Difference": 0.005441033},
+            {"Unit": 48, "MSE_Difference": 0.0053311386},
+            {"Unit": 47, "MSE_Difference": 0.004833698},
+            {"Unit": 7, "MSE_Difference": 0.0026994855},
+            {"Unit": 29, "MSE_Difference": 0.002659042},
+            {"Unit": 25, "MSE_Difference": 0.002633811},
+            {"Unit": 39, "MSE_Difference": 0.0025071956},
+            {"Unit": 19, "MSE_Difference": 0.002403477},
+            {"Unit": 8, "MSE_Difference": 0.0022180788},
+            {"Unit": 26, "MSE_Difference": 0.0020430903},
+            {"Unit": 24, "MSE_Difference": 0.0017465532},
+            {"Unit": 22, "MSE_Difference": 0.0014705351},
+            {"Unit": 3, "MSE_Difference": 0.0014574522},
+            {"Unit": 15, "MSE_Difference": 0.0013516096},
+            {"Unit": 4, "MSE_Difference": 0.0013202374},
+            {"Unit": 1, "MSE_Difference": 0.0010132804},
+            {"Unit": 16, "MSE_Difference": 0.0009030845},
+            {"Unit": 13, "MSE_Difference": 0.00078543514},
+            {"Unit": 35, "MSE_Difference": 0.0007538159},
+            {"Unit": 20, "MSE_Difference": 0.00074536336},
+            {"Unit": 21, "MSE_Difference": 0.0006955651},
+            {"Unit": 2, "MSE_Difference": 0.0006885035},
+            {"Unit": 23, "MSE_Difference": 0.0006681877},
+            {"Unit": 36, "MSE_Difference": 0.00051046774},
+            {"Unit": 12, "MSE_Difference": 0.00048426242},
+            {"Unit": 5, "MSE_Difference": 0.00046054702},
+            {"Unit": 40, "MSE_Difference": 0.00044997878},
+            {"Unit": 14, "MSE_Difference": 0.00041664543},
+            {"Unit": 50, "MSE_Difference": 0.00027198528},
+            {"Unit": 17, "MSE_Difference": 0.00021173018}
         ]
     },
     "Weights": [
