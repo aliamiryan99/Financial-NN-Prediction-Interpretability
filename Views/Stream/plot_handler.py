@@ -454,12 +454,12 @@ class LayoutManager:
 
     def create_layout(self):
         # Top layout with buttons and info
-        left_margin = Div(text="", width=40)
+        left_margin = Div(text="", width=240)
         button_row = row(
             left_margin,
-            self.pause_button, 
-            self.speed_spinner, 
-            self.status_div,
+            # self.pause_button, 
+            # self.speed_spinner, 
+            # self.status_div,
             self.info_div,
             sizing_mode='stretch_width',
             width=800,

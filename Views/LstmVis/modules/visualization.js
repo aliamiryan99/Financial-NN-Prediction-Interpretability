@@ -13,25 +13,79 @@ const DECIMAL_POINTS = 4;
 /**
  * Renders the left sequence panel.
  */
-export function renderSequencePanel(panelSelector, sequenceData, currentSampleIndex) {
+export function renderSequencePanel(panelSelector, normalSequenceData, originalSequenceData, currentSampleIndex, container, tooltip) {
   const panel = d3.select(panelSelector);
+
+  // For showing vector tooltip with dynamic column layout
+  function showVectorTooltip(event, dict, label) {
+    const [mx, my] = d3.pointer(event, container.node());
+    const svgRect = container.node().getBoundingClientRect(); // Get SVG position
+
+    // Build HTML content
+    let htmlContent = `<b>${label}:</b><br><ul style="padding-left: 20px">`;
+    
+    for (const key in dict) {
+      htmlContent += `<li>${key} : ${dict[key]} </li>`;
+    }
+
+    htmlContent += '</ul>'
+
+    tooltip
+      .style('visibility', 'visible')
+      .html(htmlContent)
+      .style('left', (mx + svgRect.left + 60) + 'px')
+      .style('top', (my + + svgRect.top - 20) + 'px')
+  }
+
+  function appendSpan(d3Object, label, color, dict, bold) {
+    // inputs link
+    const span = d3Object.append('span')
+      .text(label)
+      .style('color', color)
+      .style('cursor', 'pointer')
+      .on('mouseover', (event) => {
+        showVectorTooltip(event, dict, label);
+      })
+      .on('mousemove', (event) => {
+        const [mx, my] = d3.pointer(event, container.node());
+        const svgRect = container.node().getBoundingClientRect(); // Get SVG position
+        tooltip
+          .style('left', (mx + svgRect.left + 60) + 'px')
+          .style('top', (my + + svgRect.top - 20) + 'px');
+      })
+      .on('mouseout', () => {
+        tooltip.style('visibility', 'hidden');
+      });
+
+      // Conditionally set the font weight based on the `bold` parameter
+      if (bold) {
+        span.style('font-weight', 'bold');
+      } else {
+        span.style('font-weight', 'normal'); // Optional: You can omit this line if you want the default behavior
+      }
+  }
+
   panel.html('');
 
   panel.append('h4').text('Input Sequence (24 steps)');
 
   const ul = panel.append('ul');
 
-  sequenceData.forEach((d, i) => {
+  const inputLength = originalSequenceData.length;
+  for (let i = 0; i < inputLength; i++){
+    const normalInput = normalSequenceData[i];
+    const originalInput = originalSequenceData[i];
     const li = ul.append('li');
-    const text = `Open=${d.Open}, High=${d.High}, Low=${d.Low}, Close=${d.Close}, Vol=${d.Volume}`;
     if (i === currentSampleIndex) {
-      li.style('font-weight', 'bold')
-        .style('font-size', '14px')
-        .text(text + ' (current)');
+      appendSpan(li, "Normalized input", 'green', normalInput, true);
+      li.append('span').text('  '); // small gap
+      appendSpan(li, "Original input", 'red', originalInput, true);
     } else {
-      li.text(text);
+      appendSpan(li, "Normalized input", 'green', normalInput, false);
+      li.append('span').text('  '); // small gap
+      appendSpan(li, "Original input", 'red', originalInput, false);
     }
-  });
+  }
 }
 
 /**
@@ -132,9 +186,6 @@ export function renderStatesPanel(panelSelector, statesHistory, container, toolt
 
   statesHistory.forEach((stateObj, i) => {
     const li = ul.append('li');
-    if (i === statesHistory.length - 1) {
-      li.style('font-weight', 'bold').style('font-size', '14px');
-    }
 
     li.append('span').text(`Step ${stateObj.stepIndex}: `);
 

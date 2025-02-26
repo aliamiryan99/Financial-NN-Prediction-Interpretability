@@ -1,7 +1,6 @@
 # Views/Stream/streamer.py
 
 from bokeh.plotting import curdoc
-import numpy as np
 
 from Configs.config_schema import Config 
 from Views.Stream.data_handler import (
@@ -204,10 +203,14 @@ class StreamUpdater:
             end_index = self.TOTAL_POINTS
 
         if self.current_index >= self.TOTAL_POINTS:
-            if self.callback_id:
-                curdoc().remove_periodic_callback(self.callback_id)
-            print("All data has been streamed.")
-            return
+            self.current_index = 0
+            # Reset data sources to start fresh
+            self.source_price.data = dict(Time=[], Open=[], High=[], Low=[], Close=[], Color=[])
+            self.source_volume.data = dict(x1=[], x2=[], Time=[], Volume=[], PredictedVolume=[], PredictedVolume_Min=[], PredictedVolume_Max=[])
+            self.source_timestep_scatter.data = dict(Feature=[], value=[])
+            self.source_feature_scatter.data = dict(Feature=[], value=[])
+            self.source_frequency_scatter.data = dict(Feature=[], value=[])
+            print("Restarting streaming from the beginning.")
 
         # make new data samples 
         new_data = self.df.iloc[self.current_index:end_index]
@@ -341,9 +344,14 @@ class StreamUpdater:
         self.current_index = end_index
 
         if self.current_index >= self.TOTAL_POINTS:
-            if self.callback_id:
-                curdoc().remove_periodic_callback(self.callback_id)
-            print("All data has been streamed.")
+            self.current_index = 0
+            # Reset data sources to start fresh
+            self.source_price.data = dict(Time=[], Open=[], High=[], Low=[], Close=[], Color=[])
+            self.source_volume.data = dict(x1=[], x2=[], Time=[], Volume=[], PredictedVolume=[], PredictedVolume_Min=[], PredictedVolume_Max=[])
+            self.source_timestep_scatter.data = dict(Feature=[], value=[])
+            self.source_feature_scatter.data = dict(Feature=[], value=[])
+            self.source_frequency_scatter.data = dict(Feature=[], value=[])
+            print("Restarting streaming from the beginning.")
 
     def toggle_pause(self):
         if self.is_paused:

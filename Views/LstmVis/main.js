@@ -27,7 +27,8 @@ const MAX_SAMPLES = 24;
 let currentSampleIndex = 0;
 let stepCounter = 0; // each press of "Play Next Sample" increments step
 
-let sequenceData = [];
+let noramlSequenceData = [];  
+let originalSequenceData = [];  
 let sequenceList = [];
 let unitsData = [];
 let statesHistory = [];
@@ -107,9 +108,10 @@ defs.append('marker')
 Promise.all([
   loadSequenceData(MAX_SAMPLES),
   loadLSTMCoreData()
-]).then(([seq, core]) => {
-  sequenceData = seq;
-  sequenceList = seq.map(item => Object.values(item));
+]).then(([inputSequenceJson, core]) => {
+  noramlSequenceData = inputSequenceJson.NormalizedInput;
+  originalSequenceData = inputSequenceJson.OriginalInput;
+  sequenceList = noramlSequenceData.map(item => Object.values(item));
   unitsData = core.unitsLayer1;
   layer1Weights = core.layer1Weights;
   const lenUnits = layer1Weights.kernel.length/4;
@@ -123,7 +125,7 @@ Promise.all([
   ({ c_t, h_t } = computeNextStates(c_tminus1, gatesActivations));
 
   // Render initial left panel
-  renderSequencePanel('#sequence-panel', sequenceData, currentSampleIndex);
+  renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, container, tooltip);
 
   // Re-render states panel on the right
   renderStatesPanel('#states-panel', statesHistory, container, tooltip, h_t, c_t);
@@ -213,7 +215,7 @@ document.getElementById('play-sample-btn').addEventListener('click', () => {
   currentSampleIndex = (currentSampleIndex + 1);
 
   // Re-render sequence panel to highlight new current
-  renderSequencePanel('#sequence-panel', sequenceData, currentSampleIndex);
+  renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, container, tooltip);
 
   // Store the hidden state and cell state then uppdate them
   stepCounter++;

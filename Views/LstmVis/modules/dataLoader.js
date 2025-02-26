@@ -28,13 +28,24 @@ export function loadSequenceData(MAX_SAMPLES = 24) {
   return d3.json('Data/InputSequence.json').then(jsonData => {
 
     // Return array of objects {Open, High, Low, Close, Volume}
-    return jsonData.NormalizedInput.map(d => ({
+    jsonData.NormalizedInput = jsonData.NormalizedInput.map(d => ({
       Open: +d.Open,
       High: +d.High,
       Low: +d.Low,
       Close: +d.Close,
       Volume: +d.Volume
     }));
+
+    jsonData.OriginalInput = jsonData.OriginalInput.map(d => ({
+      Open: +d.Open,
+      High: +d.High,
+      Low: +d.Low,
+      Close: +d.Close,
+      Volume: +d.Volume
+    }));
+
+    // Return array of objects {Open, High, Low, Close, Volume}
+    return jsonData;
   });
 }
 

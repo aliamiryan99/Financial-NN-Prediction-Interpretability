@@ -19,7 +19,7 @@ model_parameters:
   verbose: True # Show detail processing of training the NN model
 stream_visualization:
   batch_size: 1 # Streaming one data point at a time
-  update_interval: 50 # Initial streaming interval in ms
+  update_interval: 10 # Initial streaming interval in ms
   max_points: 500 # Maximum number of points to display
   time_frame: "H" # Time frame to specify the width of candles
   show_aggregator: False # To change the stream approch for plotting the ensemble method with range
