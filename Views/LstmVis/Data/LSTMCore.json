@@ -90,8 +90,26 @@
             {"Unit": 40, "MSE_Difference": 0.00044997878},
             {"Unit": 14, "MSE_Difference": 0.00041664543},
             {"Unit": 50, "MSE_Difference": 0.00027198528},
-            {"Unit": 17, "MSE_Difference": 0.00021173018}
+            {"Unit": 17, "MSE_Difference": 0.00021173018},
+            {"Unit": 6, "MSE_Difference": 0.00015290799},
+            {"Unit": 11, "MSE_Difference": 0.000118384836},
+            {"Unit": 46, "MSE_Difference": 0.00010539135},
+            {"Unit": 9, "MSE_Difference": 9.92964e-05},
+            {"Unit": 44, "MSE_Difference": 8.179008e-05},
+            {"Unit": 45, "MSE_Difference": 6.3898995e-05},
+            {"Unit": 38, "MSE_Difference": 5.3007097e-05},
+            {"Unit": 43, "MSE_Difference": 4.7745645e-05},
+            {"Unit": 28, "MSE_Difference": 4.6936988e-05},
+            {"Unit": 33, "MSE_Difference": 3.680815e-05},
+            {"Unit": 49, "MSE_Difference": 3.549625e-05},
+            {"Unit": 10, "MSE_Difference": 1.6797592e-05}
         ]
+    },
+    "Scaler":
+    {
+        "Type": "StandardScaler",
+        "Mean": 2295990.3412,
+        "Scale": 1822976.3779
     },
     "Weights": [
         [

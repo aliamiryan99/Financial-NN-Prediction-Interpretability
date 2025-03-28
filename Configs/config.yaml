@@ -22,6 +22,6 @@ stream_visualization:
   update_interval: 10 # Initial streaming interval in ms
   max_points: 500 # Maximum number of points to display
   time_frame: "H" # Time frame to specify the width of candles
-  show_aggregator: False # To change the stream approch for plotting the ensemble method with range
+  show_aggregator: True # To change the stream approch for plotting the ensemble method with range
 evaluation_visualization:
   n_cols: 3 # Number of column grid of loss charts

@@ -229,7 +229,8 @@ body {
 }
 
 .lstm-gate-label,
-.lstm-op-label {
+.lstm-op-label,
+.final-output-label {
   pointer-events: none;
 }
 

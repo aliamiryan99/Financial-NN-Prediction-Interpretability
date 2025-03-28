@@ -9,11 +9,13 @@ import { roundArray } from './dataLoader.js';
 import { sigmoid, tanh, computeAllGateOutputs } from './utils.js'; 
 
 const DECIMAL_POINTS = 4;
+const D3TRANSITION_DURATION = 750;
+const RECT_WIDTH = 160;
 
 /**
  * Renders the left sequence panel.
  */
-export function renderSequencePanel(panelSelector, normalSequenceData, originalSequenceData, currentSampleIndex, container, tooltip) {
+export function renderSequencePanel(panelSelector, normalSequenceData, originalSequenceData, currentSampleIndex, prevHistory, phase, container, tooltip) {
   const panel = d3.select(panelSelector);
 
   // For showing vector tooltip with dynamic column layout
@@ -71,19 +73,38 @@ export function renderSequencePanel(panelSelector, normalSequenceData, originalS
 
   const ul = panel.append('ul');
 
-  const inputLength = originalSequenceData.length;
-  for (let i = 0; i < inputLength; i++){
-    const normalInput = normalSequenceData[i];
-    const originalInput = originalSequenceData[i];
-    const li = ul.append('li');
-    if (i === currentSampleIndex) {
-      appendSpan(li, "Normalized input", 'green', normalInput, true);
-      li.append('span').text('  '); // small gap
-      appendSpan(li, "Original input", 'red', originalInput, true);
-    } else {
-      appendSpan(li, "Normalized input", 'green', normalInput, false);
-      li.append('span').text('  '); // small gap
-      appendSpan(li, "Original input", 'red', originalInput, false);
+  if (phase == 1){
+    const inputLength = originalSequenceData.length;
+    for (let i = 0; i < inputLength; i++){
+      const normalInput = normalSequenceData[i];
+      const originalInput = originalSequenceData[i];
+      const li = ul.append('li');
+      if (i === currentSampleIndex) {
+        appendSpan(li, "Normalized input", 'green', normalInput, true);
+        li.append('span').text('  '); // small gap
+        appendSpan(li, "Original input", 'red', originalInput, true);
+      } else {
+        appendSpan(li, "Normalized input", 'green', normalInput, false);
+        li.append('span').text('  '); // small gap
+        appendSpan(li, "Original input", 'red', originalInput, false);
+      }
+    }
+  }
+  else{
+    const inputLength = prevHistory.length;
+    for (let i = 0; i < inputLength; i++){
+      const hiddenState = prevHistory[i].hiddenState;
+      const cellState = prevHistory[i].cellState;
+      const li = ul.append('li');
+      if (i === currentSampleIndex) {
+        appendSpan(li, "HiddenState", 'green', hiddenState, true);
+        li.append('span').text('  '); // small gap
+        appendSpan(li, "CellState", 'red', cellState, true);
+      } else {
+        appendSpan(li, "HiddenState", 'green', hiddenState, false);
+        li.append('span').text('  '); // small gap
+        appendSpan(li, "CellState", 'red', cellState, false);
+      }
     }
   }
 }
@@ -725,11 +746,262 @@ export function centerAllUnits(svg, mainGroup, zoom, width, height, repositionLa
  * Reposition "LSTM Layer 1" text above the bounding box of all units
  */
 export function repositionLayerTitle(mainGroup) {
+
+  // extract the text of the .layer-title
+  const titleText = mainGroup.select('.layer-title').text();
+
+  // set the text to an empty string
+  mainGroup.select('.layer-title').text('');
+
   const bounds = mainGroup.node().getBBox();
   const titleX = bounds.x + bounds.width / 2;
+
+  // set the text back to the original value
+  mainGroup.select('.layer-title').text(titleText);
+
   // Animate x position
   mainGroup.select('.layer-title')
     .transition()
     .duration(500)
     .attr('x', titleX);
+}
+
+export function renderFinalLayerInputs(mainGroup, data, container, tooltip) {
+  const inputSize = 20; // Size of input squares
+
+  const inputGroups = mainGroup.selectAll('.final-input-group')
+    .data(data, d => d.id);
+
+  inputGroups.exit().remove();
+
+  const inputGroupsEnter = inputGroups.enter()
+    .append('g')
+    .attr('class', 'final-input-group');
+
+  inputGroupsEnter
+    .append('rect')
+    .attr('class', 'final-input-rect')
+    .attr('width', inputSize)
+    .attr('height', inputSize)
+    .attr('fill', '#69b3a2') // Green to distinguish inputs
+    .attr('stroke', '#333')
+    .attr('stroke-width', 2)
+    .attr('opacity', 0)
+    .on('mouseover', (event, d) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('visibility', 'visible')
+        .html(`<b>Input Unit ${d.id}</b><br>Value (h_t): ${d.h_t.toFixed(4)}<br>Importance: ${d.importance.toFixed(4)}`)
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mousemove', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mouseout', () => {
+      tooltip.style('visibility', 'hidden');
+    });
+
+  const merged = inputGroupsEnter.merge(inputGroups);
+  merged.select('rect')
+    .transition().duration(D3TRANSITION_DURATION)
+    .attr('x', d => d.x - inputSize / 2)
+    .attr('y', d => d.y - inputSize / 2)
+    .attr('opacity', 1);
+}
+
+export function renderFinalLayerConnections(mainGroup, inputs, neuronX, neuronY, container, tooltip) {
+  const connections = inputs.map(input => ({
+    source: { x: input.x + 10, y: input.y },
+    target: { x: neuronX - 20, y: neuronY },
+    weight: input.weight
+  }));
+
+  const connSel = mainGroup.selectAll('.final-connection')
+    .data(connections);
+
+  connSel.exit().remove();
+
+  const connEnter = connSel.enter()
+    .append('path') // Use 'path' for curved lines
+    .attr('class', 'final-connection')
+    .attr('stroke', '#333')
+    .attr('stroke-width', 3)
+    .attr('fill', 'none')
+    .on('mouseover', (event, d) => {
+      const path = d3.select(event.target);
+      path.attr('stroke-dasharray', '5,5')
+          .transition()
+          .duration(1000)
+          .ease(d3.easeLinear)
+          .attrTween('stroke-dashoffset', () => {
+            const length = path.node().getTotalLength();
+            return d3.interpolate(0, length);
+          })
+          .on('end', function() {
+            d3.select(this).transition().duration(1000).attrTween('stroke-dashoffset', () => d3.interpolate(0, length));
+          });
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('visibility', 'visible')
+        .html(`<b>Weight:</b> ${d.weight.toFixed(4)}`)
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mousemove', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mouseout', (event) => {
+      d3.select(event.target).interrupt()
+        .attr('stroke-dasharray', null)
+        .attr('stroke', '#333');
+      tooltip.style('visibility', 'hidden');
+    });
+
+  connEnter.merge(connSel)
+    .transition().duration(750)
+    .attr('d', d => generateCurveFFinputs(d.source, d.target));
+}
+
+function generateCurveFFinputs(source, target) {
+  const midX = (source.x + target.x) / 2;
+  const midY = (source.y + target.y) / 2;
+  return `M ${source.x},${source.y} C ${midX},${source.y} ${midX},${target.y} ${target.x},${target.y}`;
+}
+
+export function renderFinalNeuron(mainGroup, x, y, output, denormalizedOutput, container, tooltip, weights) {
+  mainGroup.selectAll('.final-neuron').remove();
+  mainGroup.selectAll('.final-output-group').remove();
+  mainGroup.selectAll('.final-output-connection').remove(); // Remove old connection lines
+
+  // Neuron circle with tooltip
+  mainGroup.append('circle')
+    .attr('class', 'final-neuron')
+    .attr('cx', x)
+    .attr('cy', y)
+    .attr('r', 20)
+    .attr('fill', 'navy')
+    .attr('stroke', '#333')
+    .attr('stroke-width', 2)
+    .on('mouseover', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      const weightsStr = weights.map(w => w.toFixed(4)).join(', ');
+      tooltip
+        .style('visibility', 'visible')
+        .html(`<b>Neuron Weights:</b> [${weightsStr}]`)
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mousemove', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mouseout', () => {
+      tooltip.style('visibility', 'hidden');
+    });
+
+  // Output connection line with hover effect
+  const outputX = x + 100;
+  mainGroup.append('line')
+    .attr('class', 'final-output-connection')
+    .attr('x1', x + 20)
+    .attr('y1', y)
+    .attr('x2', outputX) // Adjusted for larger output rect
+    .attr('y2', y)
+    .attr('stroke', '#333')
+    .attr('stroke-width', 2)
+    .on('mouseover', (event) => {
+      const line = d3.select(event.target);
+      line.attr('stroke-dasharray', '5,5')
+          .attr('stroke', 'blue')
+          .transition()
+          .duration(1000)
+          .ease(d3.easeLinear)
+          .attrTween('stroke-dashoffset', () => {
+            const length = line.node().getTotalLength();
+            return d3.interpolate(0, length);
+          })
+          .on('end', function() {
+            d3.select(this).transition().duration(1000).attrTween('stroke-dashoffset', () => d3.interpolate(0, length));
+          });
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('visibility', 'visible')
+        .html(`<b>Output Connection</b>`)
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mousemove', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mouseout', (event) => {
+      d3.select(event.target).interrupt()
+        .attr('stroke-dasharray', null)
+        .attr('stroke', '#333');
+      tooltip.style('visibility', 'hidden');
+    });
+
+  // Larger output rectangle with "Output" label
+  const outputWidth = 80; 
+  const outputHeight = 50;
+  const outputGroup = mainGroup.append('g')
+    .attr('class', 'final-output-group');
+
+  outputGroup.append('rect')
+    .attr('x', outputX)
+    .attr('y', y - outputHeight / 2)
+    .attr('width', outputWidth)
+    .attr('height', outputHeight)
+    .attr('fill', '#ff6633')
+    .attr('stroke', '#333')
+    .attr('stroke-width', 2)
+    .on('mouseover', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('visibility', 'visible')
+        .html(`<b>Output:</b> ${output.toFixed(4)} </br> <b>Denormalized Output:</b> ${denormalizedOutput.toFixed(4)}`)
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mousemove', (event) => {
+      const [mx, my] = d3.pointer(event, container.node());
+      const svgRect = container.node().getBoundingClientRect();
+      tooltip
+        .style('left', (mx + svgRect.left + 15) + 'px')
+        .style('top', (my + svgRect.top + 15) + 'px');
+    })
+    .on('mouseout', () => {
+      tooltip.style('visibility', 'hidden');
+    });
+
+    outputGroup.append('text')
+    .attr('x', outputX + outputWidth / 2)
+    .attr('y', y + 5) // Centered vertically
+    .attr('class', 'final-output-label')
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '14px')
+    .attr('font-weight', 'bold') // Set font weight to bold
+    .attr('fill', '#fff') // Black text for contrast
+    .text('Output');
+  
 }

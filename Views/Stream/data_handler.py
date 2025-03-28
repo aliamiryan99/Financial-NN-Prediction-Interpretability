@@ -14,7 +14,7 @@ class ConfigLoader:
     def load_config(self):
         self.show_aggregator = self.config.stream_visualization.show_aggregator
         if self.show_aggregator:
-            self.config.data.out_path = f"Results/{self.config.data.name}/EnsembleAggregator.csv"
+            self.config.data.out_path = f"Results/Forecasting/{self.config.data.name}/EnsembleAggregator.csv"
         self.CSV_FILE_PATH = self.config.data.out_path
         self.BATCH_SIZE = self.config.stream_visualization.batch_size
         self.UPDATE_INTERVAL = self.config.stream_visualization.update_interval

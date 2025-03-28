@@ -35,8 +35,8 @@ class ForecastingModel(ModelBase):
         if self.seq_length is None or self.num_features is None:
             raise Exception("Sequence length and number of features must be set before building the model.")
         self.model = Sequential()
-        self.model.add(LSTM(50, return_sequences=True, input_shape=(self.seq_length, self.num_features)))
-        self.model.add(LSTM(50))
+        self.model.add(LSTM(6, return_sequences=True, input_shape=(self.seq_length, self.num_features)))
+        self.model.add(LSTM(6))
         self.model.add(Dense(1))
         self.model.compile(optimizer=self.config.model_parameters.optimizer, loss=self.config.model_parameters.loss)
         return self.model

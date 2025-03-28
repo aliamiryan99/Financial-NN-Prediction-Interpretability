@@ -1,5 +1,5 @@
 // main.js
-import { loadSequenceData, loadLSTMCoreData, roundArray } from './modules/dataLoader.js';
+import { loadSequenceData, loadLSTMCoreData, roundArray, loadScaler } from './modules/dataLoader.js';
 import {
   renderSequencePanel,
   renderStatesPanel,
@@ -9,10 +9,12 @@ import {
   renderGateDetails,
   zoomToUnit,
   centerAllUnits,
-  repositionLayerTitle
+  repositionLayerTitle,
+  renderFinalLayerInputs,
+  renderFinalNeuron,
+  renderFinalLayerConnections
 } from './modules/visualization.js';
-import { generateRandomVector } from './modules/randomUtils.js';
-import { computeAllGateOutputs, updateUnitsGateValues, computeNextStates } from './modules/utils.js'; 
+import { dotProduct, computeAllGateOutputs, updateUnitsGateValues, computeNextStates } from './modules/utils.js'; 
 
 // -------------- 1) CONFIG & GLOBALS ---------------
 export let NUM_COLUMNS = 3;
@@ -23,18 +25,22 @@ const UNIT_SPACING_Y = 200;
 const D3TRANSITION_DURATION = 750;
 const DECIMAL_PRECISION = 4;
 
-const MAX_SAMPLES = 24;
+let inputSampleLenght = 0;
 let currentSampleIndex = 0;
 let stepCounter = 0; // each press of "Play Next Sample" increments step
+let phase = 1 // the control variable to demonstrate the phase we are in right now so we chould show the correct layer of the model
 
+let coreData = null;
 let noramlSequenceData = [];  
 let originalSequenceData = [];  
 let sequenceList = [];
 let unitsData = [];
 let statesHistory = [];
+let prevLayerHistory = [];
 let h_t = null, h_tminus1 = null;
 let c_t = null, c_tminus1 = null;
-let layer1Weights = null; // The object {kernel, recurrent, bias}
+let layerWeights = null; // The object {kernel, recurrent, bias}
+let the_scaler = null;
 
 // Container
 const container = d3.select('#lstm-visualization');
@@ -106,26 +112,30 @@ defs.append('marker')
 
 // -------------- 2) LOAD JSON DATA ---------------
 Promise.all([
-  loadSequenceData(MAX_SAMPLES),
-  loadLSTMCoreData()
-]).then(([inputSequenceJson, core]) => {
+  loadSequenceData(),
+  loadLSTMCoreData(),
+  loadScaler()
+]).then(([inputSequenceJson, core, scaler]) => {
+  coreData = core;
+  the_scaler = scaler;
   noramlSequenceData = inputSequenceJson.NormalizedInput;
   originalSequenceData = inputSequenceJson.OriginalInput;
   sequenceList = noramlSequenceData.map(item => Object.values(item));
+  inputSampleLenght = sequenceList.length
   unitsData = core.unitsLayer1;
-  layer1Weights = core.layer1Weights;
-  const lenUnits = layer1Weights.kernel.length/4;
+  layerWeights = core.layer1Weights;
+  const lenUnits = layerWeights.kernel.length/4;
   h_tminus1 = new Array(lenUnits).fill(0);
   h_t = new Array(lenUnits).fill(0);
   c_tminus1 = new Array(lenUnits).fill(0);
   c_t = new Array(lenUnits).fill(0);
 
-  const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layer1Weights);
+  const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layerWeights);
   updateUnitsGateValues(unitsData, gatesActivations);
   ({ c_t, h_t } = computeNextStates(c_tminus1, gatesActivations));
 
   // Render initial left panel
-  renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, container, tooltip);
+  renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, prevLayerHistory, phase, container, tooltip);
 
   // Re-render states panel on the right
   renderStatesPanel('#states-panel', statesHistory, container, tooltip, h_t, c_t);
@@ -181,7 +191,7 @@ function handleUnitClick(event, d) {
   d3.select(this).select('rect').classed('zoomed-in', true);
 
   // Render internal gate details
-  renderGateDetails(mainGroup, d, container, tooltip, layer1Weights, sequenceList[currentSampleIndex], h_tminus1, h_t, c_tminus1, c_t);
+  renderGateDetails(mainGroup, d, container, tooltip, layerWeights, sequenceList[currentSampleIndex], h_tminus1, h_t, c_tminus1, c_t);
 }
 
 // -------------- 5) UI ---------------
@@ -191,7 +201,11 @@ const unitsLabel = document.getElementById('units-label');
 unitsCountInput.addEventListener('input', function() {
   const val = +this.value;
   unitsLabel.textContent = val;
-  updateVisualization(val);
+  if (phase === 3) { // Assuming phase 3 is the final layer
+    renderFinalLayer();
+  } else {
+    updateVisualization(val); // For previous layers
+  }
 });
 unitsLabel.textContent = unitsCountInput.value;
 
@@ -215,7 +229,7 @@ document.getElementById('play-sample-btn').addEventListener('click', () => {
   currentSampleIndex = (currentSampleIndex + 1);
 
   // Re-render sequence panel to highlight new current
-  renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, container, tooltip);
+  renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, prevLayerHistory, phase, container, tooltip);
 
   // Store the hidden state and cell state then uppdate them
   stepCounter++;
@@ -229,7 +243,7 @@ document.getElementById('play-sample-btn').addEventListener('click', () => {
   h_tminus1 = h_t;
   c_tminus1 = c_t;
 
-  const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layer1Weights);
+  const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layerWeights);
   updateUnitsGateValues(unitsData, gatesActivations);
   ({ c_t, h_t } = computeNextStates(c_tminus1, gatesActivations));
 
@@ -239,10 +253,109 @@ document.getElementById('play-sample-btn').addEventListener('click', () => {
   // Rerun update so the input connections use new sample
   updateVisualization(+unitsCountInput.value);
 
-  if (currentSampleIndex >= MAX_SAMPLES - 1) {
+  if (currentSampleIndex >= inputSampleLenght - 1) {
     // Optionally, process the final sample update here if needed.
     // Then disable the play button to prevent further clicks.
-    document.getElementById('play-sample-btn').disabled = true;
-    return;
+
+    if (phase == 1){
+
+      // Store the hidden state and cell state then uppdate them
+      stepCounter++;
+      statesHistory.push({
+        stepIndex: stepCounter,
+        hiddenState: roundArray(h_t, DECIMAL_PRECISION),
+        cellState: roundArray(c_t, DECIMAL_PRECISION)
+      });
+
+      unitsData = coreData.unitsLayer2;
+      layerWeights = coreData.layer2Weights;
+      const lenUnits = layerWeights.kernel.length/4;
+      h_tminus1 = new Array(lenUnits).fill(0);
+      h_t = new Array(lenUnits).fill(0);
+      c_tminus1 = new Array(lenUnits).fill(0);
+      c_t = new Array(lenUnits).fill(0);
+
+      prevLayerHistory = statesHistory;
+      statesHistory = [];
+      currentSampleIndex = 0;
+      stepCounter = 0;
+
+      phase = 2;
+
+      sequenceList = prevLayerHistory.map(item => item.hiddenState);
+
+      inputSampleLenght = sequenceList.length
+
+      mainGroup.select('.layer-title')
+      .text("LSTM Layer 2")
+
+       // Re-render sequence panel to highlight new current
+      renderSequencePanel('#sequence-panel', noramlSequenceData, originalSequenceData, currentSampleIndex, prevLayerHistory, phase, container, tooltip);
+
+      const gatesActivations = computeAllGateOutputs(sequenceList[currentSampleIndex], h_tminus1, layerWeights);
+      updateUnitsGateValues(unitsData, gatesActivations);
+      ({ c_t, h_t } = computeNextStates(c_tminus1, gatesActivations));
+
+      // Re-render states panel on the right
+      renderStatesPanel('#states-panel', statesHistory, container, tooltip, h_t, c_t);
+
+      // Rerun update so the input connections use new sample
+      updateVisualization(+unitsCountInput.value);
+
+      return
+    }
+    else if (phase == 2) {
+      phase = 3;
+      unitsData = []
+      // Rerun update so the input connections use new sample
+      updateVisualization(0);
+
+      mainGroup.select('.layer-title')
+      .text("Final Feed Forward Layer")
+
+      renderFinalLayer();
+      document.getElementById('play-sample-btn').disabled = true;
+    }
   }
 });
+
+// Add this new function after updateVisualization
+function renderFinalLayer() {
+  const final_h_t = h_t; // Final hidden state from phase 2
+  const finalWeights = coreData.finalWeights;
+  const y = dotProduct(finalWeights.weight, final_h_t) + finalWeights.bias;
+
+  // calculate the denormalized value based on the scaler
+  const denormalizedY = y * the_scaler.scale + the_scaler.mean;
+
+  const numUnits = +unitsCountInput.value;
+  const unitsLayer2 = coreData.unitsLayer2;
+  const topUnits = unitsLayer2
+    .slice()
+    .sort((a, b) => d3.descending(a.importance, b.importance))
+    .slice(0, numUnits);
+
+  const bounds = mainGroup.node().getBBox();
+  const inputX = bounds.x + bounds.width + 100;
+  const spacing = 50;
+  const yStart = 100;
+
+  // Indent odd-numbered inputs
+  topUnits.forEach((unit, i) => {
+    const offset = i % 2 === 1 ? +20 : 0; // Indent odd indices by 50px
+    unit.x = inputX + offset;
+    unit.y = yStart + i * spacing;
+    unit.h_t = final_h_t[unit.id];
+    unit.weight = finalWeights.weight[unit.id];
+  });
+
+  const finalNeuronX = inputX + 200;
+  const finalNeuronY = yStart + ((numUnits - 1) * spacing) / 2;
+
+  renderFinalLayerInputs(mainGroup, topUnits, container, tooltip);
+  renderFinalNeuron(mainGroup, finalNeuronX, finalNeuronY, y, denormalizedY, container, tooltip, finalWeights.weight); // Pass weights
+  renderFinalLayerConnections(mainGroup, topUnits, finalNeuronX, finalNeuronY, container, tooltip);
+
+  repositionLayerTitle(mainGroup);
+  centerAllUnits(svg, mainGroup, zoom, width, height, repositionLayerTitle);
+}
